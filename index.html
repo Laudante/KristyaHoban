@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kristyasworn — Registro di Costruzione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1ECDC;
+    --paper-dim:#E7E0CB;
+    --ink:#1E2A38;
+    --ink-soft:#4B5A6B;
+    --rule:#C9BE9E;
+    --stamp-red:#A8402F;
+    --stamp-green:#5B6E3A;
+    --stamp-gold:#9A7A1E;
+    --card:#FAF7EE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px;}
+
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px;margin-bottom:6px;flex-wrap:wrap;gap:10px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:30px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .subtitle{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-top:4px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+  .save-status{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    text-align:right;
+  }
+  .save-status.dot::before{
+    content:'●';color:var(--stamp-green);margin-right:5px;
+  }
+
+  nav.tabs{
+    display:flex;gap:2px;margin:22px 0 20px;
+    border-bottom:1px solid var(--rule);
+  }
+  nav.tabs button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    background:none;border:none;
+    padding:10px 16px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+  nav.tabs button.active{
+    color:var(--ink);
+    border-bottom:2px solid var(--stamp-red);
+    font-weight:600;
+  }
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* stamp grid */
+  .stamps{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:10px;
+    margin-bottom:26px;
+  }
+  .stamp{
+    background:var(--card);
+    border:1px solid var(--rule);
+    border-radius:2px;
+    padding:12px 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .stamp .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-soft);
+  }
+  .stamp .value{
+    font-family:'Fraunces',serif;
+    font-size:26px;
+    font-weight:600;
+    margin-top:2px;
+  }
+  .stamp .target{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-top:1px;
+  }
+  .stamp .mark{
+    position:absolute;top:10px;right:10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:0.08em;
+    padding:3px 7px;
+    border-radius:2px;
+    transform:rotate(4deg);
+    border:1.5px solid currentColor;
+  }
+  .mark.pass{color:var(--stamp-green);}
+  .mark.flag{color:var(--stamp-red);}
+
+  .deck-total-banner{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    padding:9px 14px;
+    border:1px solid var(--rule);
+    background:var(--card);
+    margin-bottom:18px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .deck-total-banner.bad{border-color:var(--stamp-red);color:var(--stamp-red);}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--card);
+    border:1px solid var(--rule);
+  }
+  th{
+    text-align:left;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    padding:8px 10px;
+    border-bottom:1.5px solid var(--ink);
+    white-space:nowrap;
+  }
+  td{
+    padding:6px 10px;
+    border-bottom:1px solid var(--rule);
+    font-size:13.5px;
+    vertical-align:middle;
+  }
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--paper-dim);}
+
+  input[type=text], input[type=number], select{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    background:transparent;
+    border:1px solid transparent;
+    border-radius:2px;
+    padding:4px 5px;
+    width:100%;
+    color:var(--ink);
+  }
+  input[type=text]:hover, input[type=number]:hover, select:hover{border-color:var(--rule);}
+  input[type=text]:focus, input[type=number]:focus, select:focus{
+    outline:none;border-color:var(--stamp-red);background:#fff;
+  }
+  input[type=number]{width:55px;text-align:center;}
+  input[type=checkbox]{transform:scale(1.15);cursor:pointer;}
+  td.center{text-align:center;}
+
+  .role-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    padding:2px 6px;
+    border-radius:2px;
+    display:inline-block;
+  }
+  select.role-select{cursor:pointer;}
+
+  .del-btn{
+    background:none;border:none;cursor:pointer;
+    color:var(--stamp-red);font-size:15px;
+    opacity:0.55;
+  }
+  .del-btn:hover{opacity:1;}
+
+  .add-row{
+    margin-top:12px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;padding:8px 14px;
+    cursor:pointer;
+    border-radius:2px;
+  }
+  .add-row:hover{background:#31445a;}
+
+  .section-title{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    font-weight:600;
+    margin:30px 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--rule);
+  }
+  .hint{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:6px 0 14px;
+    line-height:1.5;
+  }
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:4px;max-width:260px;}
+  .chip{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;
+    padding:3px 6px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    background:transparent;
+    user-select:none;
+  }
+  .chip.on{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+
+  .matrix-wrap{overflow-x:auto;margin-top:24px;}
+  table.matrix th, table.matrix td{text-align:center;font-size:11.5px;}
+  table.matrix th.rowhead, table.matrix td.rowhead{text-align:left;font-size:12.5px;}
+  table.matrix td.yes{background:#DCE3C8;color:var(--stamp-green);font-weight:700;}
+
+  .reset-link{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    cursor:pointer;
+    background:none;border:none;
+    margin-top:30px;
+  }
+  .loading{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--ink-soft);padding:40px;text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="loading">Caricamento registro…</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'kristyasworn-deck-v1';
+
+const ROLES = [
+  {id:'starter', label:'Starter', min:11, max:13},
+  {id:'extender', label:'Extender', min:12, max:14},
+  {id:'removal', label:'Rimozione', min:0, max:3},
+  {id:'defense', label:'Difesa', min:5, max:7},
+  {id:'reactive', label:'Reactive Ext.', min:0, max:3},
+  {id:'bomb', label:'Bomba', min:2, max:3},
+  {id:'necessity', label:'Necessità', min:0, max:1},
+  {id:'other', label:'Altro', min:null, max:null},
+];
+
+const MATCHUPS = ['Vayu','Blackwing','LS Mirror','Frog','Machina','Gladiator Beast','Gigavise','Rogue'];
+
+function defaultData(){
+  return {
+    main: [
+      {name:'Archlord Kristya', qty:3, type:'Monster', role:'bomb', atk:2800, fairy:true, ns:false},
+      {name:'Aurkus, Lightsworn Druid', qty:1, type:'Monster', role:'starter', atk:1400, fairy:false, ns:true},
+      {name:'Card Trooper', qty:1, type:'Monster', role:'starter', atk:400, fairy:false, ns:true},
+      {name:'Celestia, Lightsworn Angel', qty:2, type:'Monster', role:'extender', atk:2300, fairy:true, ns:false},
+      {name:'Ehren, Lightsworn Monk', qty:1, type:'Monster', role:'starter', atk:1000, fairy:false, ns:true},
+      {name:'Garoth, Lightsworn Warrior', qty:1, type:'Monster', role:'extender', atk:1900, fairy:false, ns:false},
+      {name:'Hecatrice', qty:1, type:'Monster', role:'necessity', atk:1300, fairy:true, ns:false},
+      {name:'Honest', qty:2, type:'Monster', role:'defense', atk:1400, fairy:true, ns:false},
+      {name:'Jain, Lightsworn Paladin', qty:1, type:'Monster', role:'starter', atk:1800, fairy:false, ns:true},
+      {name:'Judgment Dragon', qty:2, type:'Monster', role:'bomb', atk:3000, fairy:false, ns:false},
+      {name:'Lumina, Lightsworn Summoner', qty:1, type:'Monster', role:'extender', atk:1400, fairy:false, ns:false},
+      {name:'Lyla, Lightsworn Sorceress', qty:2, type:'Monster', role:'starter', atk:1600, fairy:false, ns:true},
+      {name:'Necro Gardna', qty:1, type:'Monster', role:'defense', atk:800, fairy:false, ns:false},
+      {name:'Plaguespreader Zombie', qty:1, type:'Monster', role:'extender', atk:400, fairy:false, ns:false},
+      {name:'Ryko, Lightsworn Hunter', qty:3, type:'Monster', role:'starter', atk:1300, fairy:false, ns:true},
+      {name:'Tragoedia', qty:1, type:'Monster', role:'defense', atk:2000, fairy:false, ns:false},
+      {name:'Wulf, Lightsworn Beast', qty:3, type:'Monster', role:'extender', atk:1800, fairy:false, ns:false},
+      {name:'Charge of the Light Brigade', qty:1, type:'Spell', role:'starter', atk:null, fairy:false, ns:false},
+      {name:'Foolish Burial', qty:1, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Heavy Storm', qty:1, type:'Spell', role:'removal', atk:null, fairy:false, ns:false},
+      {name:'Monster Reincarnation', qty:2, type:'Spell', role:'reactive', atk:null, fairy:false, ns:false},
+      {name:'Solar Recharge', qty:3, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Valhalla, Hall of the Fallen', qty:1, type:'Spell', role:'necessity', atk:null, fairy:false, ns:false},
+      {name:'Beckoning Light', qty:1, type:'Trap', role:'reactive', atk:null, fairy:false, ns:false},
+      {name:'Mirror Force', qty:1, type:'Trap', role:'removal', atk:null, fairy:false, ns:false},
+      {name:'Threatening Roar', qty:2, type:'Trap', role:'defense', atk:null, fairy:false, ns:false},
+    ],
+    side: [
+      {name:'Book of Moon', qty:1, matchups:[], replaces:''},
+      {name:'Brain Control', qty:1, matchups:[], replaces:''},
+      {name:'Consecrated Light', qty:2, matchups:['Blackwing','Gladiator Beast'], replaces:''},
+      {name:'Cyber Dragon', qty:2, matchups:['Machina'], replaces:''},
+      {name:'D.D. Crow', qty:2, matchups:['Blackwing','Frog','Machina'], replaces:''},
+      {name:'Gorz the Emissary of Darkness', qty:1, matchups:[], replaces:''},
+      {name:'Herald of Orange Light', qty:1, matchups:[], replaces:''},
+      {name:'Lightning Vortex', qty:1, matchups:['Gladiator Beast','Gigavise'], replaces:''},
+      {name:'Mystical Space Typhoon', qty:1, matchups:[], replaces:''},
+      {name:'Royal Decree', qty:2, matchups:[], replaces:''},
+      {name:'Treacherous Trap Hole', qty:1, matchups:[], replaces:''},
+    ],
+    extra: [
+      {name:'Ally of Justice Catastor', qty:1},
+      {name:'Ancient Sacred Wyvern', qty:1},
+      {name:'Armory Arm', qty:1},
+      {name:'Avenging Knight Parshath', qty:1},
+      {name:'Black Rose Dragon', qty:1},
+      {name:'Brionac, Dragon of the Ice Barrier', qty:1},
+      {name:'Chimeratech Fortress Dragon', qty:2},
+      {name:'Colossal Fighter', qty:1},
+      {name:'Goyo Guardian', qty:1},
+      {name:'Magical Android', qty:1},
+      {name:'Mist Wurm', qty:1},
+      {name:'Stardust Dragon', qty:1},
+      {name:'Tempest Magician', qty:1},
+      {name:'XX-Saber Gottoms', qty:1},
+    ]
+  };
+}
+
+let DATA = null;
+let activeTab = 'main';
+
+async function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    DATA = raw ? JSON.parse(raw) : defaultData();
+  }catch(e){
+    DATA = defaultData();
+  }
+  render();
+}
+
+async function save(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+    const s = document.getElementById('save-status');
+    if(s){ s.textContent = 'salvato in questo browser'; s.classList.add('dot'); }
+  }catch(e){
+    const s = document.getElementById('save-status');
+    if(s){ s.textContent = 'salvataggio non riuscito'; s.classList.remove('dot'); }
+  }
+}
+
+async function resetAll(){
+  if(!confirm('Ripristinare la lista di riferimento e cancellare tutte le modifiche?')) return;
+  DATA = defaultData();
+  await save();
+  render();
+}
+
+function sumQty(list){ return list.reduce((a,c)=>a+Number(c.qty||0),0); }
+
+function computeRoleCounts(){
+  const counts = {};
+  ROLES.forEach(r=>counts[r.id]=0);
+  DATA.main.forEach(c=>{ counts[c.role] = (counts[c.role]||0) + Number(c.qty||0); });
+  return counts;
+}
+
+function computeCustomRules(){
+  let ddv=0, ns=0, fairy=0;
+  DATA.main.forEach(c=>{
+    const q = Number(c.qty||0);
+    if(c.type==='Monster' && c.atk!==null && c.atk!=='' && Number(c.atk)<=1500) ddv+=q;
+    if(c.ns) ns+=q;
+    if(c.fairy) fairy+=q;
+  });
+  return {ddv, ns, fairy};
+}
+
+function roleColor(roleId){
+  return {
+    starter:'#5B6E3A', extender:'#2F5A6B', removal:'#A8402F', defense:'#9A7A1E',
+    reactive:'#7A5A9A', bomb:'#B23A2E', necessity:'#6B6B6B', other:'#999'
+  }[roleId] || '#999';
+}
+
+function render(){
+  const app = document.getElementById('app');
+  const mainTotal = sumQty(DATA.main);
+  const roleCounts = computeRoleCounts();
+  const custom = computeCustomRules();
+
+  app.innerHTML = `
+    <header>
+      <div>
+        <h1>Kristyasworn — Registro di Costruzione</h1>
+        <div class="subtitle">Edison Format · Curve di Hoban + regole personali</div>
+      </div>
+      <div class="save-status dot" id="save-status">salvato</div>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="main" class="${activeTab==='main'?'active':''}">Main Deck</button>
+      <button data-tab="side" class="${activeTab==='side'?'active':''}">Side Patterns</button>
+      <button data-tab="extra" class="${activeTab==='extra'?'active':''}">Extra Deck</button>
+    </nav>
+
+    <div class="panel ${activeTab==='main'?'active':''}" id="panel-main">
+      <div class="deck-total-banner ${mainTotal!==40?'bad':''}">
+        <span>MAIN DECK TOTAL</span>
+        <span>${mainTotal} / 40</span>
+      </div>
+
+      <div class="stamps">
+        ${ROLES.filter(r=>r.id!=='other').map(r=>{
+          const v = roleCounts[r.id]||0;
+          const pass = v>=r.min && v<=r.max;
+          return `<div class="stamp">
+            <div class="label">${r.label}</div>
+            <div class="value">${v}</div>
+            <div class="target">target ${r.min===r.max? r.min : r.min+'–'+r.max}</div>
+            <div class="mark ${pass?'pass':'flag'}">${pass?'OK':'FUORI'}</div>
+          </div>`;
+        }).join('')}
+        <div class="stamp">
+          <div class="label">DDV Target (ATK≤1500)</div>
+          <div class="value">${custom.ddv}</div>
+          <div class="target">max 12</div>
+          <div class="mark ${custom.ddv<=12?'pass':'flag'}">${custom.ddv<=12?'OK':'FUORI'}</div>
+        </div>
+        <div class="stamp">
+          <div class="label">Starter Normal Summon</div>
+          <div class="value">${custom.ns}</div>
+          <div class="target">max 9</div>
+          <div class="mark ${custom.ns<=9?'pass':'flag'}">${custom.ns<=9?'OK':'FUORI'}</div>
+        </div>
+        <div class="stamp">
+          <div class="label">Fedeli (Fairy)</div>
+          <div class="value">${custom.fairy}</div>
+          <div class="target">8</div>
+          <div class="mark ${custom.fairy===8?'pass':'flag'}">${custom.fairy===8?'OK':'FUORI'}</div>
+        </div>
+      </div>
+
+      <div class="section-title">Carte</div>
+      <div class="hint">Il ruolo determina in quale categoria della tabella conta la carta. Spunta "Fata" per il conteggio Fedeli, "NS" se è uno starter ad evocazione normale che rientra nel tetto dei 9.</div>
+      <table>
+        <thead><tr>
+          <th style="width:26%">Nome</th>
+          <th>Qtà</th>
+          <th>Tipo</th>
+          <th>Ruolo</th>
+          <th>ATK</th>
+          <th>Fata</th>
+          <th>NS</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="main-tbody"></tbody>
+      </table>
+      <button class="add-row" id="add-main">+ aggiungi carta</button>
+    </div>
+
+    <div class="panel ${activeTab==='side'?'active':''}" id="panel-side">
+      <div class="section-title">Side Deck — pattern per matchup</div>
+      <div class="hint">Clicca sui matchup per taggare in quali serie questa carta entra tipicamente, e indica cosa esce dal main al suo posto.</div>
+      <table>
+        <thead><tr>
+          <th style="width:20%">Nome</th>
+          <th>Qtà</th>
+          <th>Matchup</th>
+          <th style="width:22%">Sostituisce (main)</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="side-tbody"></tbody>
+      </table>
+      <button class="add-row" id="add-side">+ aggiungi carta side</button>
+
+      <div class="matrix-wrap">
+        <div class="section-title">Matrice matchup</div>
+        <table class="matrix">
+          <thead><tr><th class="rowhead">Carta</th>${MATCHUPS.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${DATA.side.map(c=>`<tr><td class="rowhead">${c.name}</td>${MATCHUPS.map(m=>`<td class="${c.matchups.includes(m)?'yes':''}">${c.matchups.includes(m)?'●':''}</td>`).join('')}</tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel ${activeTab==='extra'?'active':''}" id="panel-extra">
+      <div class="section-title">Extra Deck</div>
+      <table>
+        <thead><tr><th style="width:70%">Nome</th><th>Qtà</th><th></th></tr></thead>
+        <tbody id="extra-tbody"></tbody>
+      </table>
+      <button class="add-row" id="add-extra">+ aggiungi carta extra</button>
+    </div>
+
+    <button class="reset-link" id="reset-btn">Ripristina lista di riferimento</button>
+  `;
+
+  renderMainRows();
+  renderSideRows();
+  renderExtraRows();
+  bindGlobal();
+}
+
+function renderMainRows(){
+  const tbody = document.getElementById('main-tbody');
+  tbody.innerHTML = DATA.main.map((c,i)=>`
+    <tr>
+      <td><input type="text" value="${c.name}" data-idx="${i}" data-field="name" class="main-field"></td>
+      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="main-field"></td>
+      <td>
+        <select data-idx="${i}" data-field="type" class="main-field">
+          ${['Monster','Spell','Trap'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select data-idx="${i}" data-field="role" class="main-field role-select" style="color:${roleColor(c.role)}">
+          ${ROLES.map(r=>`<option value="${r.id}" ${c.role===r.id?'selected':''}>${r.label}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="number" placeholder="—" value="${c.atk===null?'':c.atk}" data-idx="${i}" data-field="atk" class="main-field" style="width:55px" ${c.type!=='Monster'?'disabled':''}></td>
+      <td class="center"><input type="checkbox" ${c.fairy?'checked':''} data-idx="${i}" data-field="fairy" class="main-field"></td>
+      <td class="center"><input type="checkbox" ${c.ns?'checked':''} data-idx="${i}" data-field="ns" class="main-field"></td>
+      <td class="center"><button class="del-btn" data-idx="${i}" data-list="main">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderSideRows(){
+  const tbody = document.getElementById('side-tbody');
+  tbody.innerHTML = DATA.side.map((c,i)=>`
+    <tr>
+      <td><input type="text" value="${c.name}" data-idx="${i}" data-field="name" class="side-field"></td>
+      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="side-field"></td>
+      <td>
+        <div class="chip-row">
+          ${MATCHUPS.map(m=>`<button class="chip ${c.matchups.includes(m)?'on':''}" data-idx="${i}" data-matchup="${m}">${m}</button>`).join('')}
+        </div>
+      </td>
+      <td><input type="text" placeholder="es. Wulf, Solar Recharge" value="${c.replaces}" data-idx="${i}" data-field="replaces" class="side-field"></td>
+      <td class="center"><button class="del-btn" data-idx="${i}" data-list="side">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderExtraRows(){
+  const tbody = document.getElementById('extra-tbody');
+  tbody.innerHTML = DATA.extra.map((c,i)=>`
+    <tr>
+      <td><input type="text" value="${c.name}" data-idx="${i}" data-field="name" class="extra-field"></td>
+      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="extra-field"></td>
+      <td class="center"><button class="del-btn" data-idx="${i}" data-list="extra">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function bindGlobal(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>{
+    b.onclick = ()=>{ activeTab = b.dataset.tab; render(); };
+  });
+
+  document.getElementById('reset-btn').onclick = resetAll;
+
+  document.getElementById('add-main').onclick = ()=>{
+    DATA.main.push({name:'Nuova carta', qty:1, type:'Monster', role:'other', atk:null, fairy:false, ns:false});
+    save(); render();
+  };
+  document.getElementById('add-side').onclick = ()=>{
+    DATA.side.push({name:'Nuova carta', qty:1, matchups:[], replaces:''});
+    save(); render();
+  };
+  document.getElementById('add-extra').onclick = ()=>{
+    DATA.extra.push({name:'Nuova carta', qty:1});
+    save(); render();
+  };
+
+  document.querySelectorAll('.del-btn').forEach(b=>{
+    b.onclick = ()=>{
+      const idx = Number(b.dataset.idx);
+      DATA[b.dataset.list].splice(idx,1);
+      save(); render();
+    };
+  });
+
+  document.querySelectorAll('.main-field').forEach(el=>{
+    el.onchange = ()=>{
+      const idx = Number(el.dataset.idx), field = el.dataset.field;
+      let val = el.type==='checkbox' ? el.checked : el.value;
+      if(field==='qty') val = Number(val);
+      if(field==='atk') val = val===''? null : Number(val);
+      DATA.main[idx][field] = val;
+      save(); render();
+    };
+  });
+
+  document.querySelectorAll('.side-field').forEach(el=>{
+    el.onchange = ()=>{
+      const idx = Number(el.dataset.idx), field = el.dataset.field;
+      let val = el.value;
+      if(field==='qty') val = Number(val);
+      DATA.side[idx][field] = val;
+      save(); render();
+    };
+  });
+
+  document.querySelectorAll('.extra-field').forEach(el=>{
+    el.onchange = ()=>{
+      const idx = Number(el.dataset.idx), field = el.dataset.field;
+      let val = field==='qty' ? Number(el.value) : el.value;
+      DATA.extra[idx][field] = val;
+      save(); render();
+    };
+  });
+
+  document.querySelectorAll('.chip').forEach(el=>{
+    el.onclick = ()=>{
+      const idx = Number(el.dataset.idx), m = el.dataset.matchup;
+      const arr = DATA.side[idx].matchups;
+      const pos = arr.indexOf(m);
+      if(pos>=0) arr.splice(pos,1); else arr.push(m);
+      save(); render();
+    };
+  });
+}
+
+load();
+</script>
+</body>
+</html>
