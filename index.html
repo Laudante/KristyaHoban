@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kristyasworn — Registro Edison (CSV NATIVO 2010)</title>
+<title>Kristyasworn — Registro di Costruzione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -185,6 +185,15 @@
   input[type=checkbox]{transform:scale(1.15);cursor:pointer;}
   td.center{text-align:center;}
 
+  .role-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    padding:2px 6px;
+    border-radius:2px;
+    display:inline-block;
+  }
+  select.role-select{cursor:pointer;}
+
   .del-btn{
     background:none;border:none;cursor:pointer;
     color:var(--stamp-red);font-size:15px;
@@ -213,24 +222,86 @@
     border-bottom:1px solid var(--rule);
   }
 
-  .btn-action {
+  .chip-row{display:flex;flex-wrap:wrap;gap:4px;max-width:280px;}
+  .chip{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;
+    padding:3px 6px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    background:transparent;
+    user-select:none;
+  }
+  .chip.on{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+
+  .matrix-wrap{overflow-x:auto;margin-top:24px;}
+  table.matrix th, table.matrix td{text-align:center;font-size:11.5px;}
+  table.matrix th.rowhead, table.matrix td.rowhead{text-align:left;font-size:12.5px;}
+  table.matrix td.yes{background:#DCE3C8;color:var(--stamp-green);font-weight:700;}
+
+  .reset-link{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
-    padding:5px 10px;
-    border:none;
-    border-radius:2px;
+    color:var(--ink-soft);
+    text-decoration:underline;
     cursor:pointer;
-    text-transform:uppercase;
+    background:none;border:none;
+    margin-top:30px;
   }
+  .loading{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--ink-soft);padding:40px;text-align:center;
+  }
+
+  .side-filter-bar {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+    padding: 10px; background: var(--paper-dim); border-radius: 2px;
+  }
+  .side-filter-bar button {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    padding: 5px 10px; border: 1px solid var(--rule); background: var(--card);
+    cursor: pointer; border-radius: 2px;
+  }
+  .side-filter-bar button.active {
+    background: var(--stamp-red); color: white; border-color: var(--stamp-red);
+  }
+
+  .preview-container {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px;
+    border-top: 2px dashed var(--rule); padding-top: 20px;
+  }
+  .preview-box { background: var(--card); border: 1px solid var(--rule); padding: 15px; border-radius: 2px; }
+  .preview-box h3 { font-family: 'Fraunces', serif; margin: 0 0 10px; font-size: 16px; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+  .preview-list { list-style: none; padding: 0; margin: 0; font-size: 12.5px; }
+  .preview-list li { padding: 4px 0; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; }
+  .preview-list li:last-child { border-bottom: none; }
+
+  /* Pool Manager Styles */
+  .pool-manager-box {
+    margin-top: 40px; padding: 16px; background: var(--paper-dim); border: 1px dashed var(--rule); border-radius: 2px;
+  }
+  .pool-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .pool-form .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 120px; flex: 1; }
+  .pool-form label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--ink-soft); }
+  .pool-form input, .pool-form select { background: var(--card); border: 1px solid var(--rule); padding: 6px; }
+  .pool-form button { background: var(--stamp-green); color: white; border: none; padding: 8px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; border-radius: 2px; height: 31px; }
+  .pool-form button:hover { background: #4a5a2f; }
 </style>
 </head>
 <body>
-<div class="wrap" id="app"></div>
+<div class="wrap" id="app">
+  <div class="loading">Caricamento registro…</div>
+</div>
 
 <script>
-const STORAGE_KEY = 'kristyasworn-deck-v4';
-let CARD_POOL_MAP = new Map(); // Mappa [nome_carta -> {id, name, type, atk, fairy}]
-let CARD_ID_MAP = new Map();   // Mappa [id_carta -> {id, name, type, atk, fairy}]
+const STORAGE_KEY = 'kristyasworn-deck-v2';
+const POOL_STORAGE_KEY = 'kristyasworn-custom-pool';
 
 const ROLES = [
   {id:'starter', label:'Starter', min:11, max:13},
@@ -251,95 +322,179 @@ const EXTRA_ROLES = [
   {id:'tech', label:'Situazionale/Tech'}
 ];
 
+const DEFAULT_CARD_POOL = [
+  {id:'28279543', name:'Archlord Kristya', type:'Monster', atk:2800, fairy:true, status:'U'},
+  {id:'05762438', name:'Aurkus, Lightsworn Druid', type:'Monster', atk:1400, fairy:false, status:'U'},
+  {id:'85087012', name:'Card Trooper', type:'Monster', atk:400, fairy:false, status:'L'},
+  {id:'59019082', name:'Celestia, Lightsworn Angel', type:'Monster', atk:2300, fairy:true, status:'U'},
+  {id:'04111114', name:'Ehren, Lightsworn Monk', type:'Monster', atk:1000, fairy:false, status:'U'},
+  {id:'30113681', name:'Garoth, Lightsworn Warrior', type:'Monster', atk:1900, fairy:false, status:'U'},
+  {id:'60161439', name:'Hecatrice', type:'Monster', atk:1500, fairy:true, status:'U'},
+  {id:'17266660', name:'Herald of Orange Light', type:'Monster', atk:300, fairy:true, status:'U'},
+  {id:'53183600', name:'Honest', type:'Monster', atk:1400, fairy:true, status:'S'},
+  {id:'96216588', name:'Jain, Lightsworn Paladin', type:'Monster', atk:1800, fairy:false, status:'U'},
+  {id:'22624363', name:'Judgment Dragon', type:'Monster', atk:3000, fairy:false, status:'S'},
+  {id:'94192409', name:'Lumina, Lightsworn Summoner', type:'Monster', atk:1400, fairy:false, status:'L'},
+  {id:'21698716', name:'Lyla, Lightsworn Sorceress', type:'Monster', atk:1600, fairy:false, status:'U'},
+  {id:'09076207', name:'Necro Gardna', type:'Monster', atk:800, fairy:false, status:'L'},
+  {id:'33420078', name:'Plaguespreader Zombie', type:'Monster', atk:400, fairy:false, status:'U'},
+  {id:'30548775', name:'Ryko, Lightsworn Hunter', type:'Monster', atk:1300, fairy:false, status:'U'},
+  {id:'98777036', name:'Tragoedia', type:'Monster', atk:2000, fairy:false, status:'L'},
+  {id:'58996430', name:'Wulf, Lightsworn Beast', type:'Monster', atk:1800, fairy:false, status:'U'},
+  {id:'16229315', name:'Charge of the Light Brigade', type:'Spell', atk:null, fairy:false, status:'L'},
+  {id:'55144522', name:'Foolish Burial', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'41426862', name:'Gold Sarcophagus', type:'Spell', atk:null, fairy:false, status:'S'},
+  {id:'74848038', name:'Monster Reincarnation', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'81020646', name:'Solar Recharge', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'48382417', name:'Valhalla, Hall of the Fallen', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'27243130', name:'Beckoning Light', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'79856792', name:'Gorz the Emissary of Darkness', type:'Monster', atk:2700, fairy:false, status:'L'},
+  {id:'04984320', name:'Caius the Shadow Monarch', type:'Monster', atk:2400, fairy:false, status:'U'},
+  {id:'77387465', name:'Kycoo the Ghost Destroyer', type:'Monster', atk:1800, fairy:false, status:'U'},
+  {id:'24508238', name:'D.D. Crow', type:'Monster', atk:100, fairy:false, status:'U'},
+  {id:'70781052', name:'Cyber Dragon', type:'Monster', atk:2100, fairy:false, status:'S'},
+  {id:'11074235', name:'Consecrated Light', type:'Monster', atk:null, fairy:false, status:'U'},
+  {id:'87910632', name:'Brain Control', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'14087893', name:'Book of Moon', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'53129443', name:'Heavy Storm', type:'Spell', atk:null, fairy:false, status:'L'},
+  {id:'05318639', name:'Mystical Space Typhoon', type:'Spell', atk:null, fairy:false, status:'L'},
+  {id:'69162521', name:'Lightning Vortex', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'32807846', name:'Reinforcement of the Army', type:'Spell', atk:null, fairy:false, status:'L'},
+  {id:'46132583', name:'Cold Wave', type:'Spell', atk:null, fairy:false, status:'U'},
+  {id:'42524454', name:'Threatening Roar', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'44095762', name:'Mirror Force', type:'Trap', atk:null, fairy:false, status:'L'},
+  {id:'53582587', name:'Torrential Tribute', type:'Trap', atk:null, fairy:false, status:'L'},
+  {id:'20403120', name:'Solemn Judgment', type:'Trap', atk:null, fairy:false, status:'L'},
+  {id:'03045136', name:'Royal Oppression', type:'Trap', atk:null, fairy:false, status:'S'},
+  {id:'51452091', name:'Royal Decree', type(--stamp-gold,):'Trap', atk:null, fairy:false, status:'S'},
+  {id:'64697231', name:'Trap Dustshoot', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'97077563', name:'Call of the Haunted', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'99590524', name:'Treacherous Trap Hole', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'81434477', name:'Needlebug Nest', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'03580323', name:'Compulsory Evacuation Device', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'29401950', name:'Bottomless Trap Hole', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'74875003', name:'Dust Tornado', type:'Trap', atk:null, fairy:false, status:'U'},
+  {id:'44508094', name:'Stardust Dragon', type:'ExtraMonster', atk:2500, fairy:false, status:'U'},
+  {id:'73580471', name:'Black Rose Dragon', type:'ExtraMonster', atk:2400, fairy:false, status:'L'},
+  {id:'26593852', name:'Brionac, Dragon of the Ice Barrier', type:'ExtraMonster', atk:2300, fairy:false, status:'L'},
+  {id:'52038441', name:'Goyo Guardian', type:'ExtraMonster', atk:2800, fairy:false, status:'L'},
+  {id:'04773834', name:'Ally of Justice Catastor', type:'ExtraMonster', atk:2600, fairy:false, status:'U'},
+  {id:'63422098', name:'Colossal Fighter', type:'ExtraMonster', atk:2800, fairy:false, status:'U'},
+  {id:'26848413', name:'Armory Arm', type:'ExtraMonster', atk:1800, fairy:false, status:'U'},
+  {id:'43385557', name:'Magical Android', type:'ExtraMonster', atk:2400, fairy:false, status:'U'},
+  {id:'27125110', name:'Mist Wurm', type:'ExtraMonster', atk:2100, fairy:false, status:'U'},
+  {id:'25862681', name:'Ancient Sacred Wyvern', type:'ExtraMonster', atk:2100, fairy:false, status:'U'},
+  {id:'81439173', name:'Avenging Knight Parshath', type:'ExtraMonster', atk:2200, fairy:false, status:'U'},
+  {id:'52352005', name:'XX-Saber Gottoms', type:'ExtraMonster', atk:2600, fairy:false, status:'U'}
+];
+
+let CARD_POOL = [...DEFAULT_CARD_POOL];
+
+const STATUS_LABEL = {U:'Unlimited (3)', S:'Semi-Limited (2)', L:'Limited (1)', F:'Forbidden (0)'};
+const STATUS_MAX = {U:3, S:2, L:1, F:0};
+
 function defaultData(){
   return {
+    matchups: ['Vayu','Blackwing','LS Mirror','Frog','Machina','Gladiator Beast','Gigavise','Rogue'],
     main: [
       {name:'Archlord Kristya', qty:3, type:'Monster', role:'bomb', atk:2800, fairy:true, ns:false},
+      {name:'Aurkus, Lightsworn Druid', qty:1, type:'Monster', role:'starter', atk:1400, fairy:false, ns:true},
+      {name:'Card Trooper', qty:1, type:'Monster', role:'starter', atk:400, fairy:false, ns:true},
+      {name:'Celestia, Lightsworn Angel', qty:2, type:'Monster', role:'extender', atk:2300, fairy:true, ns:false},
+      {name:'Ehren, Lightsworn Monk', qty:1, type:'Monster', role:'starter', atk:1000, fairy:false, ns:true},
+      {name:'Garoth, Lightsworn Warrior', qty:1, type:'Monster', role:'extender', atk:1900, fairy:false, ns:false},
+      {name:'Hecatrice', qty:1, type:'Monster', role:'necessity', atk:1300, fairy:true, ns:false},
       {name:'Honest', qty:2, type:'Monster', role:'defense', atk:1400, fairy:true, ns:false},
+      {name:'Jain, Lightsworn Paladin', qty:1, type:'Monster', role:'starter', atk:1800, fairy:false, ns:true},
+      {name:'Judgment Dragon', qty:2, type:'Monster', role:'bomb', atk:3000, fairy:false, ns:false},
+      {name:'Lumina, Lightsworn Summoner', qty:1, type:'Monster', role:'extender', atk:1400, fairy:false, ns:false},
+      {name:'Lyla, Lightsworn Sorceress', qty:2, type:'Monster', role:'starter', atk:1600, fairy:false, ns:true},
+      {name:'Necro Gardna', qty:1, type:'Monster', role:'defense', atk:800, fairy:false, ns:false},
+      {name:'Plaguespreader Zombie', qty:1, type:'Monster', role:'extender', atk:400, fairy:false, ns:false},
+      {name:'Ryko, Lightsworn Hunter', qty:3, type:'Monster', role:'starter', atk:1300, fairy:false, ns:true},
+      {name:'Tragoedia', qty:1, type:'Monster', role:'defense', atk:2000, fairy:false, ns:false},
+      {name:'Wulf, Lightsworn Beast', qty:3, type:'Monster', role:'extender', atk:1800, fairy:false, ns:false},
       {name:'Charge of the Light Brigade', qty:1, type:'Spell', role:'starter', atk:null, fairy:false, ns:false},
+      {name:'Foolish Burial', qty:1, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Heavy Storm', qty:1, type:'Spell', role:'removal', atk:null, fairy:false, ns:false},
+      {name:'Monster Reincarnation', qty:2, type:'Spell', role:'reactive', atk:null, fairy:false, ns:false},
       {name:'Solar Recharge', qty:3, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Valhalla, Hall of the Fallen', qty:1, type:'Spell', role:'necessity', atk:null, fairy:false, ns:false},
+      {name:'Beckoning Light', qty:1, type:'Trap', role:'reactive', atk:null, fairy:false, ns:false},
+      {name:'Mirror Force', qty:1, type:'Trap', role:'removal', atk:null, fairy:false, ns:false},
+      {name:'Threatening Roar', qty:2, type:'Trap', role:'defense', atk:null, fairy:false, ns:false},
     ],
-    side: [],
-    extra: []
+    side: [
+      {name:'Book of Moon', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Brain Control', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Consecrated Light', qty:2, matchups:['Blackwing','Gladiator Beast'], replaces:'', sideStatus:'1st'},
+      {name:'Cyber Dragon', qty:2, matchups:['Machina'], replaces:'', sideStatus:'2nd'},
+      {name:'D.D. Crow', qty:2, matchups:['Blackwing','Frog','Machina'], replaces:'', sideStatus:'both'},
+      {name:'Gorz the Emissary of Darkness', qty:1, matchups:[], replaces:'', sideStatus:'2nd'},
+      {name:'Herald of Orange Light', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Lightning Vortex', qty:1, matchups:['Gladiator Beast','Gigavise'], replaces:'', sideStatus:'2nd'},
+      {name:'Mystical Space Typhoon', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Royal Decree', qty:2, matchups:[], replaces:'', sideStatus:'1st'},
+      {name:'Treacherous Trap Hole', qty:1, matchups:[], replaces:'', sideStatus:'1st'},
+    ],
+    extra: [
+      {name:'Ally of Justice Catastor', qty:1, role:'remover'},
+      {name:'Ancient Sacred Wyvern', qty:1, role:'beater'},
+      {name:'Armory Arm', qty:1, role:'tech'},
+      {name:'Avenging Knight Parshath', qty:1, role:'beater'},
+      {name:'Black Rose Dragon', qty:1, role:'remover'},
+      {name:'Brionac, Dragon of the Ice Barrier', qty:1, role:'remover'},
+      {name:'Chimeratech Fortress Dragon', qty:2, role:'tech'},
+      {name:'Colossal Fighter', qty:1, role:'beater'},
+      {name:'Goyo Guardian', qty:1, role:'beater'},
+      {name:'Magical Android', qty:1, role:'tech'},
+      {name:'Mist Wurm', qty:1, role:'remover'},
+      {name:'Stardust Dragon', qty:1, role:'negator'},
+      {name:'Tempest Magician', qty:1, role:'tech'},
+      {name:'XX-Saber Gottoms', qty:1, role:'beater'},
+    ]
   };
 }
 
 let DATA = null;
 let activeTab = 'main';
+let activeSideFilter = 'all';
 
-async function initCardPool() {
-  try {
-    const res = await fetch('edison_cardpool_2010.csv');
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const csvText = await res.text();
-    parseCSV(csvText);
-  } catch (err) {
-    console.warn("Caricamento CSV automatico non riuscito, pronto per l'upload manuale del CSV Edison.");
-  }
-}
-
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/);
-  if (lines.length < 2) return;
-  
-  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
-  const idxIndex = headers.indexOf('index');
-  const idxName = headers.indexOf('name');
-  const idxType = headers.indexOf('type');
-  const idxAtk = headers.indexOf('attack');
-  const idxRace = headers.indexOf('race');
-  const idxSubtype = headers.indexOf('sub_type');
-
-  CARD_POOL_MAP.clear();
-  CARD_ID_MAP.clear();
-
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    
-    // Regex per gestire correttamente i campi CSV con virgole e virgolette
-    const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-    const cleanRow = row.map(cell => cell.replace(/^"|"$/g, '').trim());
-
-    const name = cleanRow[idxName] || '';
-    if (!name) continue;
-
-    const id = cleanRow[idxIndex] || '';
-    const rawType = cleanRow[idxType] || '';
-    let cardType = 'Monster';
-    if (rawType.toLowerCase().includes('spell')) cardType = 'Spell';
-    else if (rawType.toLowerCase().includes('trap')) cardType = 'Trap';
-
-    const rawAtk = cleanRow[idxAtk];
-    const atk = (rawAtk !== undefined && rawAtk !== '' && !isNaN(rawAtk)) ? parseInt(rawAtk, 10) : null;
-    
-    const race = cleanRow[idxRace] ? cleanRow[idxRace].toLowerCase() : '';
-    const subtype = cleanRow[idxSubtype] ? cleanRow[idxSubtype].toLowerCase() : '';
-    const isFairy = race.includes('fairy') || subtype.includes('fairy');
-
-    const cardObj = { id, name, type: cardType, atk, fairy: isFairy };
-    CARD_POOL_MAP.set(name.toLowerCase(), cardObj);
-    if (id) CARD_ID_MAP.set(id, cardObj);
-  }
-
-  const statusEl = document.getElementById('csv-status');
-  if (statusEl) statusEl.textContent = `CSV Caricato: ${CARD_POOL_MAP.size} carte 2010`;
-  render();
-}
-
-function load(){
+async function load(){
   try{
+    const rawCustomPool = localStorage.getItem(POOL_STORAGE_KEY);
+    if(rawCustomPool){
+      const parsed = JSON.parse(rawCustomPool);
+      CARD_POOL = [...DEFAULT_CARD_POOL, ...parsed];
+    }
+    
     const raw = localStorage.getItem(STORAGE_KEY);
     DATA = raw ? JSON.parse(raw) : defaultData();
+    if(!DATA.matchups) DATA.matchups = defaultData().matchups;
   }catch(e){
     DATA = defaultData();
   }
-  initCardPool().then(() => render());
+  render();
 }
 
-function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
-  const s = document.getElementById('save-status');
-  if(s){ s.textContent = 'salvato'; s.classList.add('dot'); }
+async function save(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+    const s = document.getElementById('save-status');
+    if(s){ s.textContent = 'salvato in questo browser'; s.classList.add('dot'); }
+  }catch(e){
+    const s = document.getElementById('save-status');
+    if(s){ s.textContent = 'errore di salvataggio'; s.classList.remove('dot'); }
+  }
+}
+
+async function resetAll(){
+  if(!confirm('Ripristinare la configurazione di fabbrica?')) return;
+  localStorage.removeItem(POOL_STORAGE_KEY);
+  CARD_POOL = [...DEFAULT_CARD_POOL];
+  DATA = defaultData();
+  await save();
+  render();
 }
 
 function sumQty(list){ return list.reduce((a,c)=>a+Number(c.qty||0),0); }
@@ -355,21 +510,18 @@ function computeCustomRules(){
   let ddv=0, ns=0, fairy=0;
   DATA.main.forEach(c=>{
     const q = Number(c.qty||0);
-    if(c.type==='Monster' && c.atk !== null && c.atk !== '' && Number(c.atk) <= 1500) ddv+=q;
+    if(c.type==='Monster' && c.atk!==null && c.atk!=='' && Number(c.atk)<=1500) ddv+=q;
     if(c.ns) ns+=q;
     if(c.fairy) fairy+=q;
   });
   return {ddv, ns, fairy};
 }
 
-function handleCsvManualUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    parseCSV(evt.target.result);
-  };
-  reader.readAsText(file);
+function roleColor(roleId){
+  return {
+    starter:'#5B6E3A', extender:'#2F5A6B', removal:'#A8402F', defense:'#9A7A1E',
+    reactive:'#7A5A9A', bomb:'#B23A2E', necessity:'#6B6B6B', other:'#999'
+  }[roleId] || '#999';
 }
 
 function handleYdkImport(e) {
@@ -377,9 +529,11 @@ function handleYdkImport(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(evt) {
-    const lines = evt.target.result.split(/\r?\n/);
+    const text = evt.target.result;
+    const lines = text.split(/\r?\n/);
     const newMain = [], newSide = [], newExtra = [];
     let currentSection = null;
+    const defaultMainRef = defaultData().main;
 
     lines.forEach(line => {
       const clean = line.trim();
@@ -387,38 +541,26 @@ function handleYdkImport(e) {
       if (clean === '#main') { currentSection = 'main'; return; }
       if (clean === '#extra') { currentSection = 'extra'; return; }
       if (clean === '!side') { currentSection = 'side'; return; }
-      
       if (/^\d+$/.test(clean)) {
-        const poolCard = CARD_ID_MAP.get(clean);
-        let targetArr = currentSection === 'side' ? newSide : (currentSection === 'extra' ? newExtra : newMain);
-        
+        const poolCard = CARD_POOL.find(c => parseInt(c.id, 10) === parseInt(clean, 10));
         if (poolCard) {
+          let targetArr = currentSection === 'side' ? newSide : (currentSection === 'extra' ? newExtra : newMain);
           const existing = targetArr.find(c => c.name === poolCard.name);
           if (existing) { existing.qty++; } else {
-            let role = poolCard.type==='Spell'?'extender':(poolCard.type==='Trap'?'defense':'other');
+            const refCard = defaultMainRef.find(c => c.name === poolCard.name);
+            let role = refCard ? refCard.role : (poolCard.type==='Spell'?'extender':(poolCard.type==='Trap'?'defense':'other'));
+            let ns = refCard ? refCard.ns : false;
             if(currentSection === 'main'){
-              targetArr.push({ name: poolCard.name, qty: 1, type: poolCard.type, role, atk: poolCard.atk, fairy: poolCard.fairy, ns: false });
+              targetArr.push({ name: poolCard.name, qty: 1, type: poolCard.type==='ExtraMonster'?'Monster':poolCard.type, role, atk: poolCard.atk, fairy: poolCard.fairy||false, ns });
             } else if(currentSection === 'side'){
-              targetArr.push({ name: poolCard.name, qty: 1, replaces: '', sideStatus: 'both' });
+              targetArr.push({ name: poolCard.name, qty: 1, matchups: [], replaces: '', sideStatus: 'both' });
             } else {
               targetArr.push({ name: poolCard.name, qty: 1, role: 'none' });
-            }
-          }
-        } else {
-          const existing = targetArr.find(c => c.name === ('ID: ' + clean));
-          if (existing) { existing.qty++; } else {
-            if(currentSection === 'main') {
-              targetArr.push({ name: 'ID: ' + clean, qty: 1, type: 'Monster', role: 'other', atk: null, fairy: false, ns: false });
-            } else if(currentSection === 'side') {
-              targetArr.push({ name: 'ID: ' + clean, qty: 1, replaces: '', sideStatus: 'both' });
-            } else {
-              targetArr.push({ name: 'ID: ' + clean, qty: 1, role: 'none' });
             }
           }
         }
       }
     });
-    
     if (newMain.length || newSide.length || newExtra.length) {
       DATA.main = newMain; DATA.side = newSide; DATA.extra = newExtra;
       save(); render();
@@ -427,23 +569,57 @@ function handleYdkImport(e) {
   reader.readAsText(file);
 }
 
-function downloadKdeOfficialDecklist() {
-  let output = "=== KONAMI OFFICIAL DECKLIST FORM ===\n";
-  output += `Data Export: ${new Date().toLocaleDateString('it-IT')}\n\n`;
-  output += `MAIN DECK (${sumQty(DATA.main)} carte):\n`;
-  DATA.main.forEach(c => { output += `${c.qty}x ${c.name}\n`; });
-  output += `\nSIDE DECK (${sumQty(DATA.side)} carte):\n`;
-  DATA.side.forEach(c => { output += `${c.qty}x ${c.name}\n`; });
-  output += `\nEXTRA DECK (${sumQty(DATA.extra)} carte):\n`;
-  DATA.extra.forEach(c => { output += `${c.qty}x ${c.name}\n`; });
-
-  const blob = new Blob([output], { type: 'text/plain;charset=utf-8;' });
+function downloadSideCSV(){
+  let csv = "Carta,Quantita,Andamento,Sostituisce,Matchup Associati\n";
+  DATA.side.forEach(c => {
+    csv += `"${c.name}",${c.qty},"${c.sideStatus || 'both'}","${c.replaces || ''}","${c.matchups.join(' | ')}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.setAttribute("download", "official_kde_decklist.txt");
+  link.setAttribute("download", "kristyasworn_side_patterns.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+function addNewMatchup(){
+  const name = prompt("Inserisci il nome del nuovo Matchup Target:");
+  if(!name) return;
+  const clean = name.trim();
+  if(clean && !DATA.matchups.includes(clean)){
+    DATA.matchups.push(clean);
+    save(); render();
+  }
+}
+
+function handleAddCustomCard(e) {
+  e.preventDefault();
+  const id = document.getElementById('pool-id').value.trim() || Math.floor(Math.random() * 90000000 + 10000000).toString();
+  const name = document.getElementById('pool-name').value.trim();
+  const type = document.getElementById('pool-type').value;
+  const atkVal = document.getElementById('pool-atk').value;
+  const atk = (type === 'Monster' || type === 'ExtraMonster') && atkVal !== '' ? parseInt(atkVal, 10) : null;
+  const fairy = document.getElementById('pool-fairy').checked;
+  const status = document.getElementById('pool-status').value;
+
+  if (!name) { alert('Inserisci un nome valido.'); return; }
+
+  const newCard = { id, name, type, atk, fairy, status };
+  
+  let customPool = [];
+  try {
+    const raw = localStorage.getItem(POOL_STORAGE_KEY);
+    if(raw) customPool = JSON.parse(raw);
+  } catch(err) {}
+  
+  customPool.push(newCard);
+  localStorage.setItem(POOL_STORAGE_KEY, JSON.stringify(customPool));
+  CARD_POOL.push(newCard);
+
+  document.getElementById('pool-card-form').reset();
+  save(); render();
+  alert(`Carta "${name}" aggiunta con successo alla lista globale!`);
 }
 
 function render(){
@@ -455,22 +631,15 @@ function render(){
   app.innerHTML = `
     <header>
       <div>
-        <h1>Kristyasworn — Registro Edison</h1>
-        <div class="subtitle" id="csv-status">Database 2010 (${CARD_POOL_MAP.size} carte filtrate)</div>
+        <h1>Kristyasworn — Registro di Costruzione</h1>
+        <div class="subtitle">Edison Format · Pattern & Analisi Avanzata</div>
       </div>
-      <div style="display: flex; flex-direction: row; align-items: flex-end; gap: 8px;">
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
         <div class="save-status dot" id="save-status">salvato</div>
-        <label class="btn-action" style="background:var(--ink-soft); color:white;">
-          📁 Carica CSV 2010
-          <input type="file" id="csv-file-input" accept=".csv" style="display:none;">
-        </label>
-        <label class="btn-action" style="background:var(--ink); color:var(--paper);">
+        <label style="font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--ink); color:var(--paper); padding:4px 8px; border-radius:2px; cursor:pointer; text-transform:uppercase;">
           ↑ Importa .ydk
           <input type="file" id="ydk-file-input" accept=".ydk" style="display:none;">
         </label>
-        <button id="kde-export-btn" class="btn-action" style="background:var(--stamp-red); color:white;">
-          ↓ Export KDE (.txt)
-        </button>
       </div>
     </header>
 
@@ -480,6 +649,7 @@ function render(){
       <button data-tab="extra" class="${activeTab==='extra'?'active':''}">Extra Deck</button>
     </nav>
 
+    <!-- TAB MAIN -->
     <div class="panel ${activeTab==='main'?'active':''}">
       <div class="deck-total-banner ${mainTotal!==40?'bad':''}">
         <span>MAIN DECK TOTAL</span>
@@ -517,25 +687,63 @@ function render(){
         </div>
       </div>
 
-      <div class="section-title">Carte Main Deck</div>
+      <div class="section-title">Carte</div>
       <table>
         <thead><tr>
-          <th style="width:30%">Nome</th><th>Qtà</th><th>Tipo</th><th>Ruolo</th><th>ATK</th><th>Fata</th><th>NS</th><th></th>
+          <th style="width:24%">Nome</th><th>Qtà</th><th>Tipo</th><th>Ruolo</th><th>ATK</th><th>Fata</th><th>NS</th><th>Banlist</th><th></th>
         </tr></thead>
         <tbody id="main-tbody"></tbody>
       </table>
       <button class="add-row" id="add-main">+ aggiungi carta</button>
+
+      <div class="preview-container">
+        <div class="preview-box">
+          <h3>Anteprima Side Deck (${sumQty(DATA.side)} / 15)</h3>
+          <ul class="preview-list">
+            ${DATA.side.map(c=>`<li><span>${c.qty}x <strong>${c.name}</strong> <small style="color:var(--ink-soft)">(${c.sideStatus})</small></span><span style="font-size:11px; color:var(--stamp-red)">${c.matchups.length ? c.matchups.join(', ') : 'Nessuno'}</span></li>`).join('')}
+          </ul>
+        </div>
+        <div class="preview-box">
+          <h3>Anteprima Extra Deck (${sumQty(DATA.extra)} / 15)</h3>
+          <ul class="preview-list">
+            ${DATA.extra.map(c=>`<li><span>${c.qty}x <strong>${c.name}</strong></span><span class="role-badge" style="background:var(--paper-dim); font-size:10px;">${EXTRA_ROLES.find(r=>r.id===(c.role||'none')).label}</span></li>`).join('')}
+          </ul>
+        </div>
+      </div>
     </div>
 
+    <!-- TAB SIDE -->
     <div class="panel ${activeTab==='side'?'active':''}">
-      <div class="section-title">Side Patterns</div>
+      <div class="section-title">Filtri di Visualizzazione & Matchup</div>
+      <div class="side-filter-bar">
+        <button class="${activeSideFilter==='all'?'active':''}" data-filter="all">Tutte le carte</button>
+        <button class="${activeSideFilter==='1st'?'active':''}" data-filter="1st">Going 1st</button>
+        <button class="${activeSideFilter==='2nd'?'active':''}" data-filter="2nd">Going 2nd</button>
+        ${DATA.matchups.map(m=>`<button class="${activeSideFilter===m?'active':''}" data-filter="${m}">${m}</button>`).join('')}
+        <button id="add-matchup-btn" style="background:var(--ink); color:var(--paper); border:none;">+ Nuovo Matchup</button>
+        <button id="download-csv-btn" style="background:var(--stamp-green); color:white; border:none; margin-left:auto;">↓ Scarica CSV</button>
+      </div>
+
       <table>
-        <thead><tr><th style="width:30%">Nome</th><th>Qtà</th><th>Andamento</th><th>Sostituisce (main)</th><th></th></tr></thead>
+        <thead><tr>
+          <th style="width:20%">Nome</th><th>Qtà</th><th>Andamento</th><th>Matchup</th><th style="width:22%">Sostituisce (main)</th><th></th>
+        </tr></thead>
         <tbody id="side-tbody"></tbody>
       </table>
       <button class="add-row" id="add-side">+ aggiungi carta side</button>
+
+      <div class="matrix-wrap">
+        <div class="section-title">Matrice Matchup Completa</div>
+        <table class="matrix">
+          <thead><tr><th class="rowhead">Carta</th>${DATA.matchups.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${DATA.side.map(c=>`<tr><td class="rowhead">${c.name}</td>${DATA.matchups.map(m=>`<td class="${c.matchups.includes(m)?'yes':''}">${c.matchups.includes(m)?'●':''}</td>`).join('')}</tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>
 
+    <!-- TAB EXTRA -->
     <div class="panel ${activeTab==='extra'?'active':''}">
       <div class="section-title">Extra Deck</div>
       <table>
@@ -545,8 +753,52 @@ function render(){
       <button class="add-row" id="add-extra">+ aggiungi carta extra</button>
     </div>
 
-    <datalist id="edison-datalist">
-      ${Array.from(CARD_POOL_MAP.values()).map(c=>`<option value="${c.name}">`).join('')}
+    <!-- POOL MANAGER INTEGRATO -->
+    <div class="pool-manager-box">
+      <div style="font-family:'Fraunces',serif; font-size:16px; font-weight:600; margin-bottom:12px;">Inserisci una Nuova Carta nella Lista Globale (Cardpool)</div>
+      <form id="pool-card-form" class="pool-form">
+        <div class="form-group">
+          <label for="pool-name">Nome Carta</label>
+          <input type="text" id="pool-name" placeholder="es. Gorz..." required>
+        </div>
+        <div class="form-group" style="min-width:70px; flex:0.4;">
+          <label for="pool-id">Passcode/ID (opzionale)</label>
+          <input type="text" id="pool-id" placeholder="Autogenerato se vuoto">
+        </div>
+        <div class="form-group">
+          <label for="pool-type">Tipo</label>
+          <select id="pool-type">
+            <option value="Monster">Mostro (Main)</option>
+            <option value="Spell">Magia</option>
+            <option value="Trap">Trappola</option>
+            <option value="ExtraMonster">Mostro (Extra)</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:65px; flex:0.4;">
+          <label for="pool-atk">ATK (solo mostri)</label>
+          <input type="number" id="pool-atk" min="0" placeholder="-">
+        </div>
+        <div class="form-group">
+          <label for="pool-status">Legalità Edison</label>
+          <select id="pool-status">
+            <option value="U">Unlimited (3)</option>
+            <option value="S">Semi-Limited (2)</option>
+            <option value="L">Limited (1)</option>
+            <option value="F">Forbidden (0)</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:50px; flex:0.3; align-items:center; margin-bottom:6px;">
+          <label for="pool-fairy" style="margin-bottom:4px;">Fata?</label>
+          <input type="checkbox" id="pool-fairy">
+        </div>
+        <button type="submit">Salva in Pool</button>
+      </form>
+    </div>
+
+    <button class="reset-link" id="reset-btn">Ripristina lista di riferimento</button>
+
+    <datalist id="cardpool-datalist">
+      ${CARD_POOL.map(c=>`<option value="${c.name}">`).join('')}
     </datalist>
   `;
 
@@ -556,18 +808,30 @@ function render(){
   bindGlobal();
 }
 
+function findInPool(name){
+  return CARD_POOL.find(c=>c.name.toLowerCase()===(name||'').trim().toLowerCase());
+}
+
+function legalityBadge(c){
+  const pool = findInPool(c.name);
+  if(!pool) return `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft)">non in pool</span>`;
+  const over = Number(c.qty||0) > STATUS_MAX[pool.status];
+  return `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:${over?'var(--stamp-red)':'var(--ink-soft)'}">${STATUS_LABEL[pool.status]}${over?' ⚠':''}</span>`;
+}
+
 function renderMainRows(){
   const tbody = document.getElementById('main-tbody');
   if(!tbody) return;
   tbody.innerHTML = DATA.main.map((c,i)=>`
     <tr>
-      <td><input type="text" list="edison-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="main-field card-name-input"></td>
+      <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="main-field"></td>
       <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="main-field"></td>
       <td><select data-idx="${i}" data-field="type" class="main-field">${['Monster','Spell','Trap'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}</select></td>
-      <td><select data-idx="${i}" data-field="role" class="main-field role-select">${ROLES.map(r=>`<option value="${r.id}" ${c.role===r.id?'selected':''}>${r.label}</option>`).join('')}</select></td>
-      <td><input type="number" value="${c.atk===null||c.atk===undefined?'':c.atk}" data-idx="${i}" data-field="atk" class="main-field" ${c.type!=='Monster'?'disabled':''}></td>
+      <td><select data-idx="${i}" data-field="role" class="main-field role-select" style="color:${roleColor(c.role)}">${ROLES.map(r=>`<option value="${r.id}" ${c.role===r.id?'selected':''}>${r.label}</option>`).join('')}</select></td>
+      <td><input type="number" value="${c.atk===null?'':c.atk}" data-idx="${i}" data-field="atk" class="main-field" ${c.type!=='Monster'?'disabled':''}></td>
       <td class="center"><input type="checkbox" ${c.fairy?'checked':''} data-idx="${i}" data-field="fairy" class="main-field"></td>
       <td class="center"><input type="checkbox" ${c.ns?'checked':''} data-idx="${i}" data-field="ns" class="main-field"></td>
+      <td>${legalityBadge(c)}</td>
       <td class="center"><button class="del-btn" data-idx="${i}" data-list="main">✕</button></td>
     </tr>
   `).join('');
@@ -576,21 +840,36 @@ function renderMainRows(){
 function renderSideRows(){
   const tbody = document.getElementById('side-tbody');
   if(!tbody) return;
-  tbody.innerHTML = DATA.side.map((c,i)=>`
+
+  const filtered = DATA.side.filter(c => {
+    if(activeSideFilter === 'all') return true;
+    if(activeSideFilter === '1st') return c.sideStatus === '1st' || c.sideStatus === 'both';
+    if(activeSideFilter === '2nd') return c.sideStatus === '2nd' || c.sideStatus === 'both';
+    return c.matchups.includes(activeSideFilter);
+  });
+
+  tbody.innerHTML = filtered.map((c,i)=>{
+    const realIndex = DATA.side.indexOf(c);
+    return `
     <tr>
-      <td><input type="text" list="edison-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="side-field card-name-input"></td>
-      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="side-field"></td>
+      <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${realIndex}" data-field="name" class="side-field"></td>
+      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${realIndex}" data-field="qty" class="side-field"></td>
       <td>
-        <select data-idx="${i}" data-field="sideStatus" class="side-field">
+        <select data-idx="${realIndex}" data-field="sideStatus" class="side-field">
           <option value="both" ${c.sideStatus==='both'?'selected':''}>Sia 1st che 2nd</option>
           <option value="1st" ${c.sideStatus==='1st'?'selected':''}>Solo Going 1st</option>
           <option value="2nd" ${c.sideStatus==='2nd'?'selected':''}>Solo Going 2nd</option>
         </select>
       </td>
-      <td><input type="text" value="${c.replaces||''}" data-idx="${i}" data-field="replaces" class="side-field"></td>
-      <td class="center"><button class="del-btn" data-idx="${i}" data-list="side">✕</button></td>
+      <td>
+        <div class="chip-row">
+          ${DATA.matchups.map(m=>`<button class="chip ${c.matchups.includes(m)?'on':''}" data-idx="${realIndex}" data-matchup="${m}">${m}</button>`).join('')}
+        </div>
+      </td>
+      <td><input type="text" value="${c.replaces||''}" data-idx="${realIndex}" data-field="replaces" class="side-field"></td>
+      <td class="center"><button class="del-btn" data-idx="${realIndex}" data-list="side">✕</button></td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
 function renderExtraRows(){
@@ -598,7 +877,7 @@ function renderExtraRows(){
   if(!tbody) return;
   tbody.innerHTML = DATA.extra.map((c,i)=>`
     <tr>
-      <td><input type="text" list="edison-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="extra-field card-name-input"></td>
+      <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="extra-field"></td>
       <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="extra-field"></td>
       <td>
         <select data-idx="${i}" data-field="role" class="extra-field">
@@ -615,25 +894,34 @@ function bindGlobal(){
     b.onclick = ()=>{ activeTab = b.dataset.tab; render(); };
   });
 
-  const csvInput = document.getElementById('csv-file-input');
-  if (csvInput) csvInput.onchange = handleCsvManualUpload;
-
+  document.getElementById('reset-btn').onclick = resetAll;
+  
   const ydkInput = document.getElementById('ydk-file-input');
   if (ydkInput) ydkInput.onchange = handleYdkImport;
 
-  const kdeExportBtn = document.getElementById('kde-export-btn');
-  if (kdeExportBtn) kdeExportBtn.onclick = downloadKdeOfficialDecklist;
+  const addMatchupBtn = document.getElementById('add-matchup-btn');
+  if(addMatchupBtn) addMatchupBtn.onclick = addNewMatchup;
+
+  const csvBtn = document.getElementById('download-csv-btn');
+  if(csvBtn) csvBtn.onclick = downloadSideCSV;
+
+  const poolForm = document.getElementById('pool-card-form');
+  if(poolForm) poolForm.onsubmit = handleAddCustomCard;
+
+  document.querySelectorAll('.side-filter-bar button[data-filter]').forEach(b=>{
+    b.onclick = ()=>{ activeSideFilter = b.dataset.filter; renderSideRows(); document.querySelectorAll('.side-filter-bar button[data-filter]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+  });
 
   document.getElementById('add-main').onclick = ()=>{
-    DATA.main.push({name:'', qty:1, type:'Monster', role:'other', atk:null, fairy:false, ns:false});
+    DATA.main.push({name:'Nuova carta', qty:1, type:'Monster', role:'other', atk:null, fairy:false, ns:false});
     save(); render();
   };
   document.getElementById('add-side').onclick = ()=>{
-    DATA.side.push({name:'', qty:1, replaces:'', sideStatus:'both'});
+    DATA.side.push({name:'Nuova carta', qty:1, matchups:[], replaces:'', sideStatus:'both'});
     save(); render();
   };
   document.getElementById('add-extra').onclick = ()=>{
-    DATA.extra.push({name:'', qty:1, role:'none'});
+    DATA.extra.push({name:'Nuova carta', qty:1, role:'none'});
     save(); render();
   };
 
@@ -649,15 +937,13 @@ function bindGlobal(){
       const idx = Number(el.dataset.idx), field = el.dataset.field;
       let val = el.type==='checkbox' ? el.checked : el.value;
       if(field==='qty' || field==='atk') val = val===''? null : Number(val);
-      
       DATA.main[idx][field] = val;
-      
       if(field==='name'){
-        const found = CARD_POOL_MAP.get(String(val).toLowerCase().trim());
-        if(found){
-          DATA.main[idx].type = found.type;
-          DATA.main[idx].atk = found.atk;
-          DATA.main[idx].fairy = found.fairy;
+        const pool = findInPool(val);
+        if(pool){ 
+          DATA.main[idx].type = pool.type==='ExtraMonster'?'Monster':pool.type; 
+          DATA.main[idx].atk = pool.atk; 
+          DATA.main[idx].fairy = pool.fairy; 
         }
       }
       save(); render();
@@ -676,6 +962,16 @@ function bindGlobal(){
     el.onchange = ()=>{
       const idx = Number(el.dataset.idx), field = el.dataset.field;
       DATA.extra[idx][field] = field==='qty' ? Number(el.value) : el.value;
+      save(); render();
+    };
+  });
+
+  document.querySelectorAll('.chip').forEach(el=>{
+    el.onclick = ()=>{
+      const idx = Number(el.dataset.idx), m = el.dataset.matchup;
+      const arr = DATA.side[idx].matchups;
+      const pos = arr.indexOf(m);
+      if(pos>=0) arr.splice(pos,1); else arr.push(m);
       save(); render();
     };
   });
