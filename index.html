@@ -83,7 +83,6 @@
   .panel{display:none;}
   .panel.active{display:block;}
 
-  /* stamp grid */
   .stamps{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -230,7 +229,7 @@
     line-height:1.5;
   }
 
-  .chip-row{display:flex;flex-wrap:wrap;gap:4px;max-width:260px;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:4px;max-width:280px;}
   .chip{
     font-family:'IBM Plex Mono',monospace;
     font-size:9.5px;
@@ -266,6 +265,31 @@
     font-family:'IBM Plex Mono',monospace;
     font-size:12px;color:var(--ink-soft);padding:40px;text-align:center;
   }
+
+  /* Menu orizzontale orizzontale side */
+  .side-filter-bar {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+    padding: 10px; background: var(--paper-dim); border-radius: 2px;
+  }
+  .side-filter-bar button {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    padding: 5px 10px; border: 1px solid var(--rule); background: var(--card);
+    cursor: pointer; border-radius: 2px;
+  }
+  .side-filter-bar button.active {
+    background: var(--stamp-red); color: white; border-color: var(--stamp-red);
+  }
+
+  /* Preview Splitter */
+  .preview-container {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px;
+    border-top: 2px dashed var(--rule); padding-top: 20px;
+  }
+  .preview-box { background: var(--card); border: 1px solid var(--rule); padding: 15px; border-radius: 2px; }
+  .preview-box h3 { font-family: 'Fraunces', serif; margin: 0 0 10px; font-size: 16px; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+  .preview-list { list-style: none; padding: 0; margin: 0; font-size: 12.5px; }
+  .preview-list li { padding: 4px 0; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; }
+  .preview-list li:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -274,7 +298,7 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'kristyasworn-deck-v1';
+const STORAGE_KEY = 'kristyasworn-deck-v2';
 
 const ROLES = [
   {id:'starter', label:'Starter', min:11, max:13},
@@ -287,11 +311,15 @@ const ROLES = [
   {id:'other', label:'Altro', min:null, max:null},
 ];
 
-const MATCHUPS = ['Vayu','Blackwing','LS Mirror','Frog','Machina','Gladiator Beast','Gigavise','Rogue'];
+const EXTRA_ROLES = [
+  {id:'none', label:'Nessuno'},
+  {id:'remover', label:'Rimozione/Utility'},
+  {id:'beater', label:'Chiusura/Beater'},
+  {id:'negator', label:'Controllo/Negate'},
+  {id:'tech', label:'Situazionale/Tech'}
+];
 
-// Pool curato completo di carte Edison Format con l'aggiunta degli ID reali per il parsing sicuro dei .ydk
 const CARD_POOL = [
-  // Lightsworn
   {id:'28279543', name:'Archlord Kristya', type:'Monster', atk:2800, fairy:true, status:'U'},
   {id:'05762438', name:'Aurkus, Lightsworn Druid', type:'Monster', atk:1400, fairy:false, status:'U'},
   {id:'85087012', name:'Card Trooper', type:'Monster', atk:400, fairy:false, status:'L'},
@@ -317,7 +345,6 @@ const CARD_POOL = [
   {id:'81020646', name:'Solar Recharge', type:'Spell', atk:null, fairy:false, status:'U'},
   {id:'48382417', name:'Valhalla, Hall of the Fallen', type:'Spell', atk:null, fairy:false, status:'U'},
   {id:'27243130', name:'Beckoning Light', type:'Trap', atk:null, fairy:false, status:'U'},
-  // Staple generici
   {id:'79856792', name:'Gorz the Emissary of Darkness', type:'Monster', atk:2700, fairy:false, status:'L'},
   {id:'04984320', name:'Caius the Shadow Monarch', type:'Monster', atk:2400, fairy:false, status:'U'},
   {id:'77387465', name:'Kycoo the Ghost Destroyer', type:'Monster', atk:1800, fairy:false, status:'U'},
@@ -344,51 +371,6 @@ const CARD_POOL = [
   {id:'03580323', name:'Compulsory Evacuation Device', type:'Trap', atk:null, fairy:false, status:'U'},
   {id:'29401950', name:'Bottomless Trap Hole', type:'Trap', atk:null, fairy:false, status:'U'},
   {id:'74875003', name:'Dust Tornado', type:'Trap', atk:null, fairy:false, status:'U'},
-  // Blackwing
-  {id:'02843947', name:'Blackwing - Gale the Whirlwind', type:'Monster', atk:1300, fairy:false, status:'U'},
-  {id:'85215458', name:'Blackwing - Kalut the Moon Shadow', type:'Monster', atk:1700, fairy:false, status:'U'},
-  {id:'49046332', name:'Blackwing - Bora the Spear', type:'Monster', atk:1700, fairy:false, status:'U'},
-  {id:'58825559', name:'Blackwing - Shura the Blue Flame', type:'Monster', atk:1800, fairy:false, status:'U'},
-  {id:'72714461', name:'Blackwing - Vayu the Emblem of Honor', type:'Monster', atk:1600, fairy:false, status:'U'},
-  {id:'75498415', name:'Blackwing - Sirocco the Dawn', type:'Monster', atk:1900, fairy:false, status:'U'},
-  {id:'91351370', name:'Black Whirlwind', type:'Spell', atk:null, fairy:false, status:'U'},
-  {id:'53239672', name:'Icarus Attack', type:'Trap', atk:null, fairy:false, status:'U'},
-  {id:'59744639', name:'Delta Crow - Anti Reverse', type:'Trap', atk:null, fairy:false, status:'U'},
-  // Machina / Geartown
-  {id:'55564994', name:'Machina Fortress', type:'Monster', atk:2500, fairy:false, status:'U'},
-  {id:'42110604', name:'Machina Gearframe', type:'Monster', atk:1800, fairy:false, status:'U'},
-  {id:'24415400', name:'Machina Peacekeeper', type:'Monster', atk:1600, fairy:false, status:'U'},
-  {id:'50449846', name:'Machina Force', type:'Monster', atk:1000, fairy:false, status:'U'},
-  {id:'37630732', name:'Geartown', type:'Spell', atk:null, fairy:false, status:'U'},
-  // Gladiator Beast
-  {id:'27354732', name:'Gladiator Beast Bestiari', type:'Monster', atk:1500, fairy:false, status:'U'},
-  {id:'78864369', name:'Gladiator Beast Laquari', type:'Monster', atk:1400, fairy:false, status:'U'},
-  {id:'04158738', name:'Gladiator Beast Murmillo', type:'Monster', atk:1600, fairy:false, status:'U'},
-  {id:'25924658', name:'Gladiator Beast Darius', type:'Monster', atk:1700, fairy:false, status:'U'},
-  {id:'78519391', name:'Gladiator Beast Equeste', type:'Monster', atk:1500, fairy:false, status:'U'},
-  {id:'92199852', name:'Gladiator Beast Test Tiger', type:'Monster', atk:600, fairy:false, status:'U'},
-  {id:'48156348', name:'Gyzarus', type:'Monster', atk:2400, fairy:false, status:'U'},
-  {id:'78378423', name:'Heraklinos, Gladiator Beast God', type:'Monster', atk:2700, fairy:false, status:'U'},
-  // Frog
-  {id:'12538374', name:'Treeborn Frog', type:'Monster', atk:100, fairy:false, status:'S'},
-  {id:'93570990', name:'Ronintoadin', type:'Monster', atk:1000, fairy:false, status:'U'},
-  {id:'84451804', name:'Des Frog', type:'Monster', atk:100, fairy:false, status:'U'},
-  {id:'46239604', name:'Dupe Frog', type:'Monster', atk:900, fairy:false, status:'U'},
-  {id:'56832966', name:'T.A.D.P.O.L.E.', type:'Monster', atk:1200, fairy:false, status:'U'},
-  {id:'82315772', name:'Substitoad', type:'Monster', atk:1600, fairy:false, status:'U'},
-  // Vayu / Six Samurai
-  {id:'14943837', name:'Kagemusha of the Six Samurai', type:'Monster', atk:100, fairy:false, status:'U'},
-  {id:'42158271', name:'Shien\'s Squire', type:'Monster', atk:800, fairy:false, status:'U'},
-  {id:'29981921', name:'Legendary Six Samurai - Shi En', type:'Monster', atk:2100, fairy:false, status:'U'},
-  {id:'63633694', name:'Great Shogun Shien', type:'Monster', atk:2500, fairy:false, status:'U'},
-  // Quickdraw / synchro generico rogue
-  {id:'02096034', name:'Quickdraw Synchron', type:'Monster', atk:700, fairy:false, status:'U'},
-  {id:'63977025', name:'Junk Synchron', type:'Monster', atk:1300, fairy:false, status:'U'},
-  {id:'53413628', name:'Doppelwarrior', type:'Monster', atk:0, fairy:false, status:'U'},
-  {id:'43232141', name:'Turbo Synchron', type:'Monster', atk:100, fairy:false, status:'U'},
-  {id:'91869203', name:'Level Eater', type:'Monster', atk:600, fairy:false, status:'U'},
-  {id:'14343484', name:'Debris Dragon', type:'Monster', atk:1900, fairy:false, status:'U'},
-  // Extra Deck comune
   {id:'44508094', name:'Stardust Dragon', type:'ExtraMonster', atk:2500, fairy:false, status:'U'},
   {id:'73580471', name:'Black Rose Dragon', type:'ExtraMonster', atk:2400, fairy:false, status:'L'},
   {id:'26593852', name:'Brionac, Dragon of the Ice Barrier', type:'ExtraMonster', atk:2300, fairy:false, status:'L'},
@@ -400,16 +382,15 @@ const CARD_POOL = [
   {id:'27125110', name:'Mist Wurm', type:'ExtraMonster', atk:2100, fairy:false, status:'U'},
   {id:'25862681', name:'Ancient Sacred Wyvern', type:'ExtraMonster', atk:2100, fairy:false, status:'U'},
   {id:'81439173', name:'Avenging Knight Parshath', type:'ExtraMonster', atk:2200, fairy:false, status:'U'},
-  {id:'52352005', name:'XX-Saber Gottoms', type:'ExtraMonster', atk:2600, fairy:false, status:'U'},
-  {id:'07922915', name:'Chimeratech Fortress Dragon', type:'ExtraMonster', atk:0, fairy:false, status:'U'},
-  {id:'52687916', name:'Trishula, Dragon of the Ice Barrier', type:'ExtraMonster', atk:2700, fairy:false, status:'U'},
-  {id:'11112287', name:'Tempest Magician', type:'ExtraMonster', atk:2200, fairy:false, status:'U'},
+  {id:'52352005', name:'XX-Saber Gottoms', type(--'ExtraMonster'), atk:2600, fairy:false, status:'U'}
 ];
+
 const STATUS_LABEL = {U:'Unlimited (3)', S:'Semi-Limited (2)', L:'Limited (1)', F:'Forbidden (0)'};
 const STATUS_MAX = {U:3, S:2, L:1, F:0};
 
 function defaultData(){
   return {
+    matchups: ['Vayu','Blackwing','LS Mirror','Frog','Machina','Gladiator Beast','Gigavise','Rogue'],
     main: [
       {name:'Archlord Kristya', qty:3, type:'Monster', role:'bomb', atk:2800, fairy:true, ns:false},
       {name:'Aurkus, Lightsworn Druid', qty:1, type:'Monster', role:'starter', atk:1400, fairy:false, ns:true},
@@ -439,44 +420,46 @@ function defaultData(){
       {name:'Threatening Roar', qty:2, type:'Trap', role:'defense', atk:null, fairy:false, ns:false},
     ],
     side: [
-      {name:'Book of Moon', qty:1, matchups:[], replaces:''},
-      {name:'Brain Control', qty:1, matchups:[], replaces:''},
-      {name:'Consecrated Light', qty:2, matchups:['Blackwing','Gladiator Beast'], replaces:''},
-      {name:'Cyber Dragon', qty:2, matchups:['Machina'], replaces:''},
-      {name:'D.D. Crow', qty:2, matchups:['Blackwing','Frog','Machina'], replaces:''},
-      {name:'Gorz the Emissary of Darkness', qty:1, matchups:[], replaces:''},
-      {name:'Herald of Orange Light', qty:1, matchups:[], replaces:''},
-      {name:'Lightning Vortex', qty:1, matchups:['Gladiator Beast','Gigavise'], replaces:''},
-      {name:'Mystical Space Typhoon', qty:1, matchups:[], replaces:''},
-      {name:'Royal Decree', qty:2, matchups:[], replaces:''},
-      {name:'Treacherous Trap Hole', qty:1, matchups:[], replaces:''},
+      {name:'Book of Moon', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Brain Control', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Consecrated Light', qty:2, matchups:['Blackwing','Gladiator Beast'], replaces:'', sideStatus:'1st'},
+      {name:'Cyber Dragon', qty:2, matchups:['Machina'], replaces:'', sideStatus:'2nd'},
+      {name:'D.D. Crow', qty:2, matchups:['Blackwing','Frog','Machina'], replaces:'', sideStatus:'both'},
+      {name:'Gorz the Emissary of Darkness', qty:1, matchups:[], replaces:'', sideStatus:'2nd'},
+      {name:'Herald of Orange Light', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Lightning Vortex', qty:1, matchups:['Gladiator Beast','Gigavise'], replaces:'', sideStatus:'2nd'},
+      {name:'Mystical Space Typhoon', qty:1, matchups:[], replaces:'', sideStatus:'both'},
+      {name:'Royal Decree', qty:2, matchups:[], replaces:'', sideStatus:'1st'},
+      {name:'Treacherous Trap Hole', qty:1, matchups:[], replaces:'', sideStatus:'1st'},
     ],
     extra: [
-      {name:'Ally of Justice Catastor', qty:1},
-      {name:'Ancient Sacred Wyvern', qty:1},
-      {name:'Armory Arm', qty:1},
-      {name:'Avenging Knight Parshath', qty:1},
-      {name:'Black Rose Dragon', qty:1},
-      {name:'Brionac, Dragon of the Ice Barrier', qty:1},
-      {name:'Chimeratech Fortress Dragon', qty:2},
-      {name:'Colossal Fighter', qty:1},
-      {name:'Goyo Guardian', qty:1},
-      {name:'Magical Android', qty:1},
-      {name:'Mist Wurm', qty:1},
-      {name:'Stardust Dragon', qty:1},
-      {name:'Tempest Magician', qty:1},
-      {name:'XX-Saber Gottoms', qty:1},
+      {name:'Ally of Justice Catastor', qty:1, role:'remover'},
+      {name:'Ancient Sacred Wyvern', qty:1, role:'beater'},
+      {name:'Armory Arm', qty:1, role:'tech'},
+      {name:'Avenging Knight Parshath', qty:1, role:'beater'},
+      {name:'Black Rose Dragon', qty:1, role:'remover'},
+      {name:'Brionac, Dragon of the Ice Barrier', qty:1, role:'remover'},
+      {name:'Chimeratech Fortress Dragon', qty:2, role:'tech'},
+      {name:'Colossal Fighter', qty:1, role:'beater'},
+      {name:'Goyo Guardian', qty:1, role:'beater'},
+      {name:'Magical Android', qty:1, role:'tech'},
+      {name:'Mist Wurm', qty:1, role:'remover'},
+      {name:'Stardust Dragon', qty:1, role:'negator'},
+      {name:'Tempest Magician', qty:1, role:'tech'},
+      {name:'XX-Saber Gottoms', qty:1, role:'beater'},
     ]
   };
 }
 
 let DATA = null;
 let activeTab = 'main';
+let activeSideFilter = 'all'; // all, 1st, 2nd, o matchup specific
 
 async function load(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     DATA = raw ? JSON.parse(raw) : defaultData();
+    if(!DATA.matchups) DATA.matchups = defaultData().matchups;
   }catch(e){
     DATA = defaultData();
   }
@@ -490,12 +473,12 @@ async function save(){
     if(s){ s.textContent = 'salvato in questo browser'; s.classList.add('dot'); }
   }catch(e){
     const s = document.getElementById('save-status');
-    if(s){ s.textContent = 'salvataggio non riuscito'; s.classList.remove('dot'); }
+    if(s){ s.textContent = 'errore di salvataggio'; s.classList.remove('dot'); }
   }
 }
 
 async function resetAll(){
-  if(!confirm('Ripristinare la lista di riferimento e cancellare tutte le modifiche?')) return;
+  if(!confirm('Ripristinare la configurazione di fabbrica?')) return;
   DATA = defaultData();
   await save();
   render();
@@ -528,21 +511,15 @@ function roleColor(roleId){
   }[roleId] || '#999';
 }
 
-// LOGICA INTEGRATA PER LEGGERE I FILE .YDK PRESERVANDO I RUOLI E I FLAGS PRE-IMPOSTATI
 function handleYdkImport(e) {
   const file = e.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function(evt) {
     const text = evt.target.result;
     const lines = text.split(/\r?\n/);
-    
-    const newMain = [];
-    const newSide = [];
-    const newExtra = [];
+    const newMain = [], newSide = [], newExtra = [];
     let currentSection = null;
-
     const defaultMainRef = defaultData().main;
 
     lines.forEach(line => {
@@ -551,72 +528,56 @@ function handleYdkImport(e) {
       if (clean === '#main') { currentSection = 'main'; return; }
       if (clean === '#extra') { currentSection = 'extra'; return; }
       if (clean === '!side') { currentSection = 'side'; return; }
-      
       if (/^\d+$/.test(clean)) {
-        const idStr = clean;
-        const poolCard = CARD_POOL.find(c => parseInt(c.id, 10) === parseInt(idStr, 10));
-        
+        const poolCard = CARD_POOL.find(c => parseInt(c.id, 10) === parseInt(clean, 10));
         if (poolCard) {
-          let targetArr = newMain;
-          if (currentSection === 'side') targetArr = newSide;
-          if (currentSection === 'extra') targetArr = newExtra;
-
+          let targetArr = currentSection === 'side' ? newSide : (currentSection === 'extra' ? newExtra : newMain);
           const existing = targetArr.find(c => c.name === poolCard.name);
-          if (existing) {
-            existing.qty++;
-          } else {
+          if (existing) { existing.qty++; } else {
             const refCard = defaultMainRef.find(c => c.name === poolCard.name);
-            let role = 'other';
-            let ns = false;
-            let fairy = poolCard.fairy || false;
-
-            if (refCard) {
-              role = refCard.role;
-              ns = refCard.ns;
-              fairy = refCard.fairy;
+            let role = refCard ? refCard.role : (poolCard.type==='Spell'?'extender':(poolCard.type==='Trap'?'defense':'other'));
+            let ns = refCard ? refCard.ns : false;
+            if(currentSection === 'main'){
+              targetArr.push({ name: poolCard.name, qty: 1, type: poolCard.type==='ExtraMonster'?'Monster':poolCard.type, role, atk: poolCard.atk, fairy: poolCard.fairy||false, ns });
+            } else if(currentSection === 'side'){
+              targetArr.push({ name: poolCard.name, qty: 1, matchups: [], replaces: '', sideStatus: 'both' });
             } else {
-              if (poolCard.type === 'Spell') role = 'extender';
-              else if (poolCard.type === 'Trap') role = 'defense';
-              else if (poolCard.fairy) role = 'bomb';
-            }
-
-            if (currentSection === 'main') {
-              targetArr.push({
-                name: poolCard.name,
-                qty: 1,
-                type: poolCard.type === 'ExtraMonster' ? 'Monster' : poolCard.type,
-                role: role,
-                atk: poolCard.atk,
-                fairy: fairy,
-                ns: ns
-              });
-            } else if (currentSection === 'side') {
-              targetArr.push({
-                name: poolCard.name,
-                qty: 1,
-                matchups: [],
-                replaces: ''
-              });
-            } else {
-              targetArr.push({
-                name: poolCard.name,
-                qty: 1
-              });
+              targetArr.push({ name: poolCard.name, qty: 1, role: 'none' });
             }
           }
         }
       }
     });
-
-    if (newMain.length > 0 || newSide.length > 0 || newExtra.length > 0) {
-      DATA.main = newMain;
-      DATA.side = newSide;
-      DATA.extra = newExtra;
-      save();
-      render();
+    if (newMain.length || newSide.length || newExtra.length) {
+      DATA.main = newMain; DATA.side = newSide; DATA.extra = newExtra;
+      save(); render();
     }
   };
   reader.readAsText(file);
+}
+
+function downloadSideCSV(){
+  let csv = "Carta,Quantita,Andamento,Sostituisce,Matchup Associati\n";
+  DATA.side.forEach(c => {
+    csv += `"${c.name}",${c.qty},"${c.sideStatus || 'both'}","${c.replaces || ''}","${c.matchups.join(' | ')}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute("download", "kristyasworn_side_patterns.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function addNewMatchup(){
+  const name = prompt("Inserisci il nome del nuovo Matchup Target:");
+  if(!name) return;
+  const clean = name.trim();
+  if(clean && !DATA.matchups.includes(clean)){
+    DATA.matchups.push(clean);
+    save(); render();
+  }
 }
 
 function render(){
@@ -629,7 +590,7 @@ function render(){
     <header>
       <div>
         <h1>Kristyasworn — Registro di Costruzione</h1>
-        <div class="subtitle">Edison Format · Curve di Hoban + regole personali</div>
+        <div class="subtitle">Edison Format · Pattern & Analisi Avanzata</div>
       </div>
       <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
         <div class="save-status dot" id="save-status">salvato</div>
@@ -646,7 +607,8 @@ function render(){
       <button data-tab="extra" class="${activeTab==='extra'?'active':''}">Extra Deck</button>
     </nav>
 
-    <div class="panel ${activeTab==='main'?'active':''}" id="panel-main">
+    <!-- TAB MAIN -->
+    <div class="panel ${activeTab==='main'?'active':''}">
       <div class="deck-total-banner ${mainTotal!==40?'bad':''}">
         <span>MAIN DECK TOTAL</span>
         <span>${mainTotal} / 40</span>
@@ -684,54 +646,67 @@ function render(){
       </div>
 
       <div class="section-title">Carte</div>
-      <div class="hint">Il ruolo determina in quale categoria della tabella conta la carta. Spunta "Fata" per il conteggio Fedeli, "NS" se è uno starter ad evocazione normale che rientra nel tetto dei 9. Digitando il nome compare un suggerimento dal pool Edison curato (Lightsworn + i 7 matchup target + staple generici): selezionandolo, ATK/Fata/Tipo si compilano da soli e la colonna Banlist mostra il limite di copie, segnalando ⚠ se lo superi.</div>
       <table>
         <thead><tr>
-          <th style="width:24%">Nome</th>
-          <th>Qtà</th>
-          <th>Tipo</th>
-          <th>Ruolo</th>
-          <th>ATK</th>
-          <th>Fata</th>
-          <th>NS</th>
-          <th>Banlist</th>
-          <th></th>
+          <th style="width:24%">Nome</th><th>Qtà</th><th>Tipo</th><th>Ruolo</th><th>ATK</th><th>Fata</th><th>NS</th><th>Banlist</th><th></th>
         </tr></thead>
         <tbody id="main-tbody"></tbody>
       </table>
       <button class="add-row" id="add-main">+ aggiungi carta</button>
+
+      <!-- PREVIEW COMPATTE A FONDO PAGINA DEL MAIN -->
+      <div class="preview-container">
+        <div class="preview-box">
+          <h3>Anteprima Side Deck (${sumQty(DATA.side)} / 15)</h3>
+          <ul class="preview-list">
+            ${DATA.side.map(c=>`<li><span>${c.qty}x <strong>${c.name}</strong> <small style="color:var(--ink-soft)">(${c.sideStatus})</small></span><span style="font-size:11px; color:var(--stamp-red)">${c.matchups.length ? c.matchups.join(', ') : 'Nessuno'}</span></li>`).join('')}
+          </ul>
+        </div>
+        <div class="preview-box">
+          <h3>Anteprima Extra Deck (${sumQty(DATA.extra)} / 15)</h3>
+          <ul class="preview-list">
+            ${DATA.extra.map(c=>`<li><span>${c.qty}x <strong>${c.name}</strong></span><span class="role-badge" style="background:var(--paper-dim); font-size:10px;">${EXTRA_ROLES.find(r=>r.id===(c.role||'none')).label}</span></li>`).join('')}
+          </ul>
+        </div>
+      </div>
     </div>
 
-    <div class="panel ${activeTab==='side'?'active':''}" id="panel-side">
-      <div class="section-title">Side Deck — pattern per matchup</div>
-      <div class="hint">Clicca sui matchup per taggare in quali serie questa carta entra tipicamente, e indica cosa esce dal main al suo posto.</div>
+    <!-- TAB SIDE -->
+    <div class="panel ${activeTab==='side'?'active':''}">
+      <div class="section-title">Filtri di Visualizzazione & Matchup</div>
+      <div class="side-filter-bar">
+        <button class="${activeSideFilter==='all'?'active':''}" data-filter="all">Tutte le carte</button>
+        <button class="${activeSideFilter==='1st'?'active':''}" data-filter="1st">Going 1st</button>
+        <button class="${activeSideFilter==='2nd'?'active':''}" data-filter="2nd">Going 2nd</button>
+        ${DATA.matchups.map(m=>`<button class="${activeSideFilter===m?'active':''}" data-filter="${m}">${m}</button>`).join('')}
+        <button id="add-matchup-btn" style="background:var(--ink); color:var(--paper); border:none;">+ Nuovo Matchup</button>
+        <button id="download-csv-btn" style="background:var(--stamp-green); color:white; border:none; margin-left:auto;">↓ Scarica CSV</button>
+      </div>
+
       <table>
         <thead><tr>
-          <th style="width:20%">Nome</th>
-          <th>Qtà</th>
-          <th>Matchup</th>
-          <th style="width:22%">Sostituisce (main)</th>
-          <th></th>
+          <th style="width:20%">Nome</th><th>Qtà</th><th>Andamento</th><th>Matchup</th><th style="width:22%">Sostituisce (main)</th><th></th>
         </tr></thead>
         <tbody id="side-tbody"></tbody>
       </table>
       <button class="add-row" id="add-side">+ aggiungi carta side</button>
 
       <div class="matrix-wrap">
-        <div class="section-title">Matrice matchup</div>
+        <div class="section-title">Matrice Matchup Completa</div>
         <table class="matrix">
-          <thead><tr><th class="rowhead">Carta</th>${MATCHUPS.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
+          <thead><tr><th class="rowhead">Carta</th>${DATA.matchups.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
           <tbody>
-            ${DATA.side.map(c=>`<tr><td class="rowhead">${c.name}</td>${MATCHUPS.map(m=>`<td class="${c.matchups.includes(m)?'yes':''}">${c.matchups.includes(m)?'●':''}</td>`).join('')}</tr>`).join('')}
+            ${DATA.side.map(c=>`<tr><td class="rowhead">${c.name}</td>${DATA.matchups.map(m=>`<td class="${c.matchups.includes(m)?'yes':''}">${c.matchups.includes(m)?'●':''}</td>`).join('')}</tr>`).join('')}
           </tbody>
         </table>
       </div>
     </div>
 
-    <div class="panel ${activeTab==='extra'?'active':''}" id="panel-extra">
+    <!-- TAB EXTRA -->
+    <div class="panel ${activeTab==='extra'?'active':''}">
       <div class="section-title">Extra Deck</div>
       <table>
-        <thead><tr><th style="width:70%">Nome</th><th>Qtà</th><th></th></tr></thead>
+        <thead><tr><th style="width:50%">Nome</th><th>Qtà</th><th>Ruolo Funzionale</th><th></th></tr></thead>
         <tbody id="extra-tbody"></tbody>
       </table>
       <button class="add-row" id="add-extra">+ aggiungi carta extra</button>
@@ -751,36 +726,26 @@ function render(){
 }
 
 function findInPool(name){
-  const n = (name||'').trim().toLowerCase();
-  return CARD_POOL.find(c=>c.name.toLowerCase()===n);
+  return CARD_POOL.find(c=>c.name.toLowerCase()===(name||'').trim().toLowerCase());
 }
 
 function legalityBadge(c){
   const pool = findInPool(c.name);
   if(!pool) return `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft)">non in pool</span>`;
-  const max = STATUS_MAX[pool.status];
-  const over = Number(c.qty||0) > max;
-  const color = over ? 'var(--stamp-red)' : 'var(--ink-soft)';
-  return `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:${color}">${STATUS_LABEL[pool.status]}${over?' ⚠':''}</span>`;
+  const over = Number(c.qty||0) > STATUS_MAX[pool.status];
+  return `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:${over?'var(--stamp-red)':'var(--ink-soft)'}">${STATUS_LABEL[pool.status]}${over?' ⚠':''}</span>`;
 }
 
 function renderMainRows(){
   const tbody = document.getElementById('main-tbody');
+  if(!tbody) return;
   tbody.innerHTML = DATA.main.map((c,i)=>`
     <tr>
       <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="main-field"></td>
       <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="main-field"></td>
-      <td>
-        <select data-idx="${i}" data-field="type" class="main-field">
-          ${['Monster','Spell','Trap'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}
-        </select>
-      </td>
-      <td>
-        <select data-idx="${i}" data-field="role" class="main-field role-select" style="color:${roleColor(c.role)}">
-          ${ROLES.map(r=>`<option value="${r.id}" ${c.role===r.id?'selected':''}>${r.label}</option>`).join('')}
-        </select>
-      </td>
-      <td><input type="number" placeholder="—" value="${c.atk===null?'':c.atk}" data-idx="${i}" data-field="atk" class="main-field" style="width:55px" ${c.type!=='Monster'?'disabled':''}></td>
+      <td><select data-idx="${i}" data-field="type" class="main-field">${['Monster','Spell','Trap'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}</select></td>
+      <td><select data-idx="${i}" data-field="role" class="main-field role-select" style="color:${roleColor(c.role)}">${ROLES.map(r=>`<option value="${r.id}" ${c.role===r.id?'selected':''}>${r.label}</option>`).join('')}</select></td>
+      <td><input type="number" value="${c.atk===null?'':c.atk}" data-idx="${i}" data-field="atk" class="main-field" ${c.type!=='Monster'?'disabled':''}></td>
       <td class="center"><input type="checkbox" ${c.fairy?'checked':''} data-idx="${i}" data-field="fairy" class="main-field"></td>
       <td class="center"><input type="checkbox" ${c.ns?'checked':''} data-idx="${i}" data-field="ns" class="main-field"></td>
       <td>${legalityBadge(c)}</td>
@@ -791,27 +756,51 @@ function renderMainRows(){
 
 function renderSideRows(){
   const tbody = document.getElementById('side-tbody');
-  tbody.innerHTML = DATA.side.map((c,i)=>`
+  if(!tbody) return;
+
+  const filtered = DATA.side.filter(c => {
+    if(activeSideFilter === 'all') return true;
+    if(activeSideFilter === '1st') return c.sideStatus === '1st' || c.sideStatus === 'both';
+    if(activeSideFilter === '2nd') return c.sideStatus === '2nd' || c.sideStatus === 'both';
+    return c.matchups.includes(activeSideFilter);
+  });
+
+  tbody.innerHTML = filtered.map((c,i)=>{
+    const realIndex = DATA.side.indexOf(c);
+    return `
     <tr>
-      <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="side-field"></td>
-      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="side-field"></td>
+      <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${realIndex}" data-field="name" class="side-field"></td>
+      <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${realIndex}" data-field="qty" class="side-field"></td>
+      <td>
+        <select data-idx="${realIndex}" data-field="sideStatus" class="side-field">
+          <option value="both" ${c.sideStatus==='both'?'selected':''}>Sia 1st che 2nd</option>
+          <option value="1st" ${c.sideStatus==='1st'?'selected':''}>Solo Going 1st</option>
+          <option value="2nd" ${c.sideStatus==='2nd'?'selected':''}>Solo Going 2nd</option>
+        </select>
+      </td>
       <td>
         <div class="chip-row">
-          ${MATCHUPS.map(m=>`<button class="chip ${c.matchups.includes(m)?'on':''}" data-idx="${i}" data-matchup="${m}">${m}</button>`).join('')}
+          ${DATA.matchups.map(m=>`<button class="chip ${c.matchups.includes(m)?'on':''}" data-idx="${realIndex}" data-matchup="${m}">${m}</button>`).join('')}
         </div>
       </td>
-      <td><input type="text" placeholder="es. Wulf, Solar Recharge" value="${c.replaces}" data-idx="${i}" data-field="replaces" class="side-field"></td>
-      <td class="center"><button class="del-btn" data-idx="${i}" data-list="side">✕</button></td>
+      <td><input type="text" value="${c.replaces||''}" data-idx="${realIndex}" data-field="replaces" class="side-field"></td>
+      <td class="center"><button class="del-btn" data-idx="${realIndex}" data-list="side">✕</button></td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
 function renderExtraRows(){
   const tbody = document.getElementById('extra-tbody');
+  if(!tbody) return;
   tbody.innerHTML = DATA.extra.map((c,i)=>`
     <tr>
-      <td><input type="text" value="${c.name}" data-idx="${i}" data-field="name" class="extra-field"></td>
+      <td><input type="text" list="cardpool-datalist" value="${c.name}" data-idx="${i}" data-field="name" class="extra-field"></td>
       <td class="center"><input type="number" min="0" value="${c.qty}" data-idx="${i}" data-field="qty" class="extra-field"></td>
+      <td>
+        <select data-idx="${i}" data-field="role" class="extra-field">
+          ${EXTRA_ROLES.map(r=>`<option value="${r.id}" ${(c.role||'none')===r.id?'selected':''}>${r.label}</option>`).join('')}
+        </select>
+      </td>
       <td class="center"><button class="del-btn" data-idx="${i}" data-list="extra">✕</button></td>
     </tr>
   `).join('');
@@ -823,27 +812,36 @@ function bindGlobal(){
   });
 
   document.getElementById('reset-btn').onclick = resetAll;
-
+  
   const ydkInput = document.getElementById('ydk-file-input');
   if (ydkInput) ydkInput.onchange = handleYdkImport;
+
+  const addMatchupBtn = document.getElementById('add-matchup-btn');
+  if(addMatchupBtn) addMatchupBtn.onclick = addNewMatchup;
+
+  const csvBtn = document.getElementById('download-csv-btn');
+  if(csvBtn) csvBtn.onclick = downloadSideCSV;
+
+  document.querySelectorAll('.side-filter-bar button[data-filter]').forEach(b=>{
+    b.onclick = ()=>{ activeSideFilter = b.dataset.filter; renderSideRows(); document.querySelectorAll('.side-filter-bar button[data-filter]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+  });
 
   document.getElementById('add-main').onclick = ()=>{
     DATA.main.push({name:'Nuova carta', qty:1, type:'Monster', role:'other', atk:null, fairy:false, ns:false});
     save(); render();
   };
   document.getElementById('add-side').onclick = ()=>{
-    DATA.side.push({name:'Nuova carta', qty:1, matchups:[], replaces:''});
+    DATA.side.push({name:'Nuova carta', qty:1, matchups:[], replaces:'', sideStatus:'both'});
     save(); render();
   };
   document.getElementById('add-extra').onclick = ()=>{
-    DATA.extra.push({name:'Nuova carta', qty:1});
+    DATA.extra.push({name:'Nuova carta', qty:1, role:'none'});
     save(); render();
   };
 
   document.querySelectorAll('.del-btn').forEach(b=>{
     b.onclick = ()=>{
-      const idx = Number(b.dataset.idx);
-      DATA[b.dataset.list].splice(idx,1);
+      DATA[b.dataset.list].splice(Number(b.dataset.idx),1);
       save(); render();
     };
   });
@@ -852,16 +850,11 @@ function bindGlobal(){
     el.onchange = ()=>{
       const idx = Number(el.dataset.idx), field = el.dataset.field;
       let val = el.type==='checkbox' ? el.checked : el.value;
-      if(field==='qty') val = Number(val);
-      if(field==='atk') val = val===''? null : Number(val);
+      if(field==='qty' || field==='atk') val = val===''? null : Number(val);
       DATA.main[idx][field] = val;
       if(field==='name'){
         const pool = findInPool(val);
-        if(pool){
-          DATA.main[idx].type = pool.type==='ExtraMonster' ? 'Monster' : pool.type;
-          DATA.main[idx].atk = pool.atk;
-          DATA.main[idx].fairy = pool.fairy;
-        }
+        if(pool){ DATA.main[idx].type = pool.type==='ExtraMonster'?'Monster':pool.type; DATA.main[idx].atk = pool.atk; DATA.main[idx].fairy = pool.fairy; }
       }
       save(); render();
     };
@@ -870,9 +863,7 @@ function bindGlobal(){
   document.querySelectorAll('.side-field').forEach(el=>{
     el.onchange = ()=>{
       const idx = Number(el.dataset.idx), field = el.dataset.field;
-      let val = el.value;
-      if(field==='qty') val = Number(val);
-      DATA.side[idx][field] = val;
+      DATA.side[idx][field] = field==='qty' ? Number(el.value) : el.value;
       save(); render();
     };
   });
@@ -880,8 +871,7 @@ function bindGlobal(){
   document.querySelectorAll('.extra-field').forEach(el=>{
     el.onchange = ()=>{
       const idx = Number(el.dataset.idx), field = el.dataset.field;
-      let val = field==='qty' ? Number(el.value) : el.value;
-      DATA.extra[idx][field] = val;
+      DATA.extra[idx][field] = field==='qty' ? Number(el.value) : el.value;
       save(); render();
     };
   });
