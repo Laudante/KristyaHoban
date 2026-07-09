@@ -242,21 +242,17 @@
     background:none;border:none;
     margin-top:30px;
   }
-  .loading{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:12px;color:var(--ink-soft);padding:40px;text-align:center;
-  }
 </style>
 </head>
 <body>
-<div class="wrap" id="app">
-  <div class="loading">Inizializzazione database carte da YGOPRODeck (Edison Format)…</div>
-</div>
+<div class="wrap" id="app"></div>
 
+<!-- Datalist locale caricata all'avvio per evitare blocchi CORS -->
 <datalist id="cardpool-datalist"></datalist>
 
 <script>
-const STORAGE_KEY = 'kristyasworn-deck-v3';
+// RIPRISTINATA CHIAVE ORIGINARIA PER RECUPERARE I TUOI DATI SALVATI
+const STORAGE_KEY = 'kristyasworn-deck';
 
 const ROLES = [
   {id:'starter', label:'Starter', min:11, max:13},
@@ -271,62 +267,123 @@ const ROLES = [
 
 const MATCHUPS = ['Vayu','Blackwing','LS Mirror','Frog','Machina','Gladiator Beast','Gigavise','Rogue'];
 
-let API_CARD_POOL = []; 
+// Database Edison integrato localmente per far funzionare subito l'autocompletamento
+const LOCAL_CARD_POOL = [
+  {name:'Ryko, Lightsworn Hunter', type:'Monster', atk:200, fairy:false, status:'U'},
+  {name:'Lyla, Lightsworn Sorceress', type:'Monster', atk:1600, fairy:false, status:'U'},
+  {name:'Wulf, Lightsworn Beast', type:'Monster', atk:1800, fairy:false, status:'U'},
+  {name:'Lumina, Lightsworn Summoner', type:'Monster', atk:1000, fairy:false, status:'L'},
+  {name:'Garoth, Lightsworn Warrior', type:'Monster', atk:1850, fairy:false, status:'U'},
+  {name:'Celestia, Lightsworn Angel', type:'Monster', atk:2300, fairy:true, status:'U'},
+  {name:'Judgment Dragon', type:'Monster', atk:3000, fairy:false, status:'S'},
+  {name:'Archlord Kristya', type:'Monster', atk:2800, fairy:true, status:'U'},
+  {name:'Honest', type:'Monster', atk:1400, fairy:true, status:'S'},
+  {name:'Necro Gardna', type:'Monster', atk:600, fairy:false, status:'L'},
+  {name:'Plaguespreader Zombie', type:'Monster', atk:400, fairy:false, status:'L'},
+  {name:'Gorz the Emissary of Darkness', type:'Monster', atk:2700, fairy:false, status:'L'},
+  {name:'Chaos Sorcerer', type:'Monster', atk:2300, fairy:false, status:'L'},
+  {name:'Tragoedia', type:'Monster', atk:0, fairy:false, status:'L'},
+  {name:'Cyber Dragon', type:'Monster', atk:2100, fairy:false, status:'S'},
+  {name:'Consecrated Light', type:'Monster', atk:0, fairy:true, status:'U'},
+  {name:'Super Nimble Mega Hamster', type:'Monster', atk:1100, fairy:false, status:'U'},
+  {name:'Thunder King Rai-Oh', type:'Monster', atk:1900, fairy:false, status:'S'},
+  
+  {name:'Solar Recharge', type:'Spell', atk:null, fairy:false, status:'U'},
+  {name:'Charge of the Light Brigade', type:'Spell', atk:null, fairy:false, status:'L'},
+  {name:'Heavy Storm', type:'Spell', atk:null, fairy:false, status:'L'},
+  {name:'Mystical Space Typhoon', type:'Spell', atk:null, fairy:false, status:'L'},
+  {name:'Brain Control', type:'Spell', atk:null, fairy:false, status:'L'},
+  {name:'Cold Wave', type:'Spell', atk:null, fairy:false, status:'L'},
+  {name:'Foolish Burial', type:'Spell', atk:null, fairy:false, status:'L'},
+  {name:'My Body as a Shield', type:'Spell', atk:null, fairy:false, status:'U'},
+  {name:'Book of Moon', type:'Spell', atk:null, fairy:false, status:'U'},
+  {name:'Smashing Ground', type:'Spell', atk:null, fairy:false, status:'U'},
+  {name:'Lightning Vortex', type:'Spell', atk:null, fairy:false, status:'U'},
+  {name:'Noblecon of Crossout', type:'Spell', atk:null, fairy:false, status:'U'},
+  
+  {name:'Beckoning Light', type:'Trap', atk:null, fairy:false, status:'U'},
+  {name:'Torrential Tribute', type:'Trap', atk:null, fairy:false, status:'L'},
+  {name:'Mirror Force', type:'Trap', atk:null, fairy:false, status:'L'},
+  {name:'Solemn Judgment', type:'Trap', atk:null, fairy:false, status:'L'},
+  {name:'Bottomless Trap Hole', type:'Trap', atk:null, fairy:false, status:'S'},
+  {name:'Trap Dustshoot', type:'Trap', atk:null, fairy:false, status:'L'},
+  {name:'Royal Oppression', type:'Trap', atk:null, fairy:false, status:'L'},
+  {name:'Dust Tornado', type:'Trap', atk:null, fairy:false, status:'U'},
+  {name:'Phoenix Wing Wind Blast', type:'Trap', atk:null, fairy:false, status:'U'},
+  {name:'Threatening Roar', type:'Trap', atk:null, fairy:false, status:'U'},
+  
+  {name:'Stardust Dragon', type:'Monster', atk:2500, fairy:false, status:'U'},
+  {name:'Black Rose Dragon', type:'Monster', atk:2400, fairy:false, status:'U'},
+  {name:'Goyo Guardian', type:'Monster', atk:2800, fairy:false, status:'L'},
+  {name:'Brionac, Dragon of the Ice Barrier', type:'Monster', atk:2300, fairy:false, status:'L'},
+  {name:'Ally of Justice Catastor', type:'Monster', atk:2200, fairy:false, status:'U'},
+  {name:'Colossal Fighter', type:'Monster', atk:2800, fairy:false, status:'U'},
+  {name:'Magical Android', type:'Monster', atk:2400, fairy:true, status:'U'}
+];
+
 let DATA = null;
 let activeTab = 'main';
 
-async function fetchEdisonPool() {
-  try {
-    const res = await fetch('https://db.ygoprodeck.com/api/v1/cardinfo.php?format=edison');
-    const json = await res.json();
-    API_CARD_POOL = json.data.map(c => {
-      let banStatus = 'U'; 
-      if(c.banlist_info) {
-        if(c.banlist_info.ban_edison === 'Limited') banStatus = 'L';
-        else if(c.banlist_info.ban_edison === 'Semi-Limited') banStatus = 'S';
-        else if(c.banlist_info.ban_edison === 'Banned') banStatus = 'F';
-      }
-      return {
-        name: c.name,
-        type: c.type.includes('Monster') ? (c.type.includes('Synchro') || c.type.includes('Fusion') ? 'ExtraMonster' : 'Monster') : (c.type.includes('Spell') ? 'Spell' : 'Trap'),
-        atk: c.atk !== undefined ? c.atk : null,
-        fairy: c.race === 'Fairy',
-        status: banStatus
-      };
-    });
-    
-    // Aggiorna il datalist globale una volta scaricate le API
-    const dl = document.getElementById('cardpool-datalist');
-    if(dl) {
-      dl.innerHTML = API_CARD_POOL.map(c => `<option value="${c.name.replace(/"/g, '&quot;')}">`).join('');
-    }
-  } catch(e) {
-    console.error("Errore nel recupero delle API.", e);
+// Caricamento del database locale nel datalist HTML
+function initPoolDatalist() {
+  const dl = document.getElementById('cardpool-datalist');
+  if(dl) {
+    dl.innerHTML = LOCAL_CARD_POOL.map(c => `<option value="${c.name}">`).join('');
   }
 }
 
+// Ripristinato l'elenco completo originale delle tue 40 carte e 15 di side
 function defaultData(){
   return {
     main: [
       {name:'Ryko, Lightsworn Hunter', qty:3, type:'Monster', role:'starter', atk:200, fairy:false, ns:true},
       {name:'Lyla, Lightsworn Sorceress', qty:2, type:'Monster', role:'starter', atk:1600, fairy:false, ns:true},
+      {name:'Lumina, Lightsworn Summoner', qty:1, type:'Monster', role:'starter', atk:1000, fairy:false, ns:true},
+      {name:'Garoth, Lightsworn Warrior', qty:2, type:'Monster', role:'extender', atk:1850, fairy:false, ns:true},
       {name:'Wulf, Lightsworn Beast', qty:3, type:'Monster', role:'extender', atk:1800, fairy:false, ns:false},
+      {name:'Celestia, Lightsworn Angel', qty:2, type:'Monster', role:'removal', atk:2300, fairy:true, ns:true},
+      {name:'Judgment Dragon', qty:2, type:'Monster', role:'bomb', atk:3000, fairy:false, ns:false},
       {name:'Archlord Kristya', qty:3, type:'Monster', role:'bomb', atk:2800, fairy:true, ns:false},
       {name:'Honest', qty:2, type:'Monster', role:'defense', atk:1400, fairy:true, ns:false},
-      {name:'Solar Recharge', qty:3, type:'Spell', role:'extender', atk:null, fairy:false, ns:false}
+      {name:'Necro Gardna', qty:2, type:'Monster', role:'defense', atk:600, fairy:false, ns:false},
+      {name:'Plaguespreader Zombie', qty:1, type:'Monster', role:'extender', atk:400, fairy:false, ns:false},
+      {name:'Chaos Sorcerer', qty:1, type:'Monster', role:'extender', atk:2300, fairy:false, ns:false},
+      {name:'Gorz the Emissary of Darkness', qty:1, type:'Monster', role:'defense', atk:2700, fairy:false, ns:false},
+      {name:'Tragoedia', qty:1, type:'Monster', role:'defense', atk:0, fairy:false, ns:false},
+      {name:'Solar Recharge', qty:3, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Charge of the Light Brigade', qty:1, type:'Spell', role:'starter', atk:null, fairy:false, ns:false},
+      {name:'Heavy Storm', qty:1, type:'Spell', role:'removal', atk:null, fairy:false, ns:false},
+      {name:'Mystical Space Typhoon', qty:1, type:'Spell', role:'removal', atk:null, fairy:false, ns:false},
+      {name:'Brain Control', qty:1, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Foolish Burial', qty:1, type:'Spell', role:'extender', atk:null, fairy:false, ns:false},
+      {name:'Beckoning Light', qty:2, type:'Trap', role:'reactive', atk:null, fairy:false, ns:false},
+      {name:'Torrential Tribute', qty:1, type:'Trap', role:'defense', atk:null, fairy:false, ns:false},
+      {name:'Mirror Force', type:'Trap', qty:1, role:'defense', atk:null, fairy:false, ns:false},
+      {name:'Solemn Judgment', type:'Trap', qty:1, role:'defense', atk:null, fairy:false, ns:false}
     ],
     side: [
       {name:'Consecrated Light', qty:2, matchup:'Blackwing', going1st:true, going2nd:true, replaces:'Wulf'},
-      {name:'Cyber Dragon', qty:2, matchup:'Machina', going1st:false, going2nd:true, replaces:'Ryko'}
+      {name:'Cyber Dragon', qty:2, matchup:'Machina', going1st:false, going2nd:true, replaces:'Ryko'},
+      {name:'Dust Tornado', qty:3, matchup:'Rogue', going1st:true, going2nd:true, replaces:'Beckoning Light'},
+      {name:'Bottomless Trap Hole', qty:2, matchup:'LS Mirror', going1st:true, going2nd:false, replaces:'Honest'},
+      {name:'My Body as a Shield', qty:2, matchup:'Gladiator Beast', going1st:true, going2nd:true, replaces:'Ryko'},
+      {name:'Royal Oppression', qty:2, matchup:'Vayu', going1st:true, going2nd:false, replaces:'Garoth'},
+      {name:'Threatening Roar', qty:2, matchup:'Gigavise', going1st:true, going2nd:true, replaces:'Lyla'}
     ],
     extra: [
-      {name:'Stardust Dragon', qty:1}
+      {name:'Stardust Dragon', qty:2},
+      {name:'Black Rose Dragon', qty:2},
+      {name:'Goyo Guardian', qty:1},
+      {name:'Brionac, Dragon of the Ice Barrier', qty:1},
+      {name:'Ally of Justice Catastor', qty:1},
+      {name:'Colossal Fighter', qty:1},
+      {name:'Magical Android', qty:1}
     ]
   };
 }
 
-async function init() {
-  await fetchEdisonPool();
+function init() {
+  initPoolDatalist();
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     DATA = raw ? JSON.parse(raw) : defaultData();
@@ -336,7 +393,7 @@ async function init() {
   render();
 }
 
-async function save(){
+function save(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
     const s = document.getElementById('save-status');
@@ -344,10 +401,10 @@ async function save(){
   }catch(e){};
 }
 
-async function resetAll(){
-  if(!confirm('Ripristinare la lista iniziale?')) return;
+function resetAll(){
+  if(!confirm('Ripristinare la lista di default?')) return;
   DATA = defaultData();
-  await save();
+  save();
   render();
 }
 
@@ -381,6 +438,7 @@ function roleColor(roleId){
 function render(){
   const app = document.getElementById('app');
   const mainTotal = sumQty(DATA.main);
+  const sideTotal = sumQty(DATA.side);
   const roleCounts = computeRoleCounts();
   const custom = computeCustomRules();
 
@@ -388,14 +446,14 @@ function render(){
     <header>
       <div>
         <h1>Kristyasworn — Registro di Costruzione</h1>
-        <div class="subtitle">Edison Format · Card Pool API YGOPRODeck Attivo</div>
+        <div class="subtitle">Edison Format · Card Pool Locale Attivo</div>
       </div>
       <div class="save-status dot" id="save-status">salvato</div>
     </header>
 
     <nav class="tabs">
       <button data-tab="main" class="${activeTab==='main'?'active':''}">Main Deck (${mainTotal})</button>
-      <button data-tab="side" class="${activeTab==='side'?'active':''}">Side & Matrice Turno</button>
+      <button data-tab="side" class="${activeTab==='side'?'active':''}">Side & Matrice Turno (${sideTotal})</button>
       <button data-tab="extra" class="${activeTab==='extra'?'active':''}">Extra Deck</button>
     </nav>
 
@@ -519,13 +577,13 @@ function render(){
   bindGlobal();
 }
 
-function findInApiPool(name){
-  return API_CARD_POOL.find(c=>c.name.toLowerCase()===(name||'').trim().toLowerCase());
+function findInLocalPool(name){
+  return LOCAL_CARD_POOL.find(c=>c.name.toLowerCase()===(name||'').trim().toLowerCase());
 }
 
 function legalityBadge(c){
-  const pool = findInApiPool(c.name);
-  if(!pool) return `<span style="font-size:10px;color:var(--ink-soft)">Pool Attivo</span>`;
+  const pool = findInLocalPool(c.name);
+  if(!pool) return `<span style="font-size:10px;color:var(--ink-soft)">Pool</span>`;
   const max = {U:3, S:2, L:1, F:0}[pool.status];
   const over = Number(c.qty||0) > max;
   return `<span style="font-size:10px;color:${over?'var(--stamp-red)':'var(--ink-soft)'}">${pool.status==='U'?'Unlim':pool.status==='S'?'Semi':'Lim'}${over?' ⚠':''}</span>`;
@@ -623,9 +681,9 @@ function bindGlobal(){
       DATA.main[idx][field] = val;
 
       if(field==='name'){
-        const pool = findInApiPool(val);
+        const pool = findInLocalPool(val);
         if(pool){
-          DATA.main[idx].type = pool.type==='ExtraMonster' ? 'Monster' : pool.type;
+          DATA.main[idx].type = pool.type;
           DATA.main[idx].atk = pool.atk;
           DATA.main[idx].fairy = pool.fairy;
         }
